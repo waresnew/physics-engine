@@ -1,3 +1,4 @@
+pub mod camera;
 pub mod math;
 pub mod window;
 
@@ -30,7 +31,7 @@ pub const CUBE_VERTICES: &[Vertex] = &[
     },
     Vertex {
         position: [0.5, 0.5, 0.5],
-        colour: [1.0, 0.0, 0.0],
+        colour: [0.0, 0.0, 1.0],
     },
     Vertex {
         position: [-0.5, 0.5, 0.5],
@@ -38,7 +39,7 @@ pub const CUBE_VERTICES: &[Vertex] = &[
     },
     Vertex {
         position: [-0.5, -0.5, 0.5],
-        colour: [1.0, 0.0, 0.0],
+        colour: [0.0, 0.0, 1.0],
     },
     // back face
     Vertex {
@@ -47,7 +48,7 @@ pub const CUBE_VERTICES: &[Vertex] = &[
     },
     Vertex {
         position: [-0.5, 0.5, -0.5],
-        colour: [1.0, 0.0, 0.0],
+        colour: [0.0, 0.0, 1.0],
     },
     Vertex {
         position: [0.5, 0.5, -0.5],
@@ -55,7 +56,7 @@ pub const CUBE_VERTICES: &[Vertex] = &[
     },
     Vertex {
         position: [0.5, -0.5, -0.5],
-        colour: [1.0, 0.0, 0.0],
+        colour: [0.0, 0.0, 1.0],
     },
 ];
 

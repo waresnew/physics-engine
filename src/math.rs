@@ -1,4 +1,4 @@
-use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign};
+use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 #[derive(Copy, Clone)]
 pub struct Vec3 {
     pub x: f32,
@@ -53,11 +53,18 @@ impl_vec3_op!(Sub, sub, -, SubAssign, sub_assign, -=);
 impl_vec3_op!(Mul, mul, *, MulAssign, mul_assign, *=);
 impl_vec3_op!(Div, div, /, DivAssign, div_assign, /=);
 
-impl Vec3 {
-    pub fn new(x: f32, y: f32, z: f32) -> Self {
-        Self { x, y, z }
+impl Neg for Vec3 {
+    type Output = Self;
+    fn neg(self) -> Self {
+        Self {
+            x: -self.x,
+            y: -self.y,
+            z: -self.z,
+        }
     }
+}
 
+impl Vec3 {
     pub fn mag(&self) -> f32 {
         (self.x * self.x + self.y * self.y + self.z * self.z).sqrt()
     }
@@ -95,5 +102,20 @@ impl Mat4 {
 impl Default for Mat4 {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl Mul for Mat4 {
+    type Output = Self;
+    fn mul(self, other: Self) -> Self {
+        let mut ans = Mat4::new();
+        for i in 0..4 {
+            for j in 0..4 {
+                for k in 0..4 {
+                    ans.array[i][j] += self.array[i][k] * other.array[k][j];
+                }
+            }
+        }
+        ans
     }
 }
