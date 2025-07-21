@@ -1,4 +1,4 @@
-use physics_engine::{CUBE_INDICES, CUBE_VERTICES, Vertex};
+use crate::{CUBE_INDICES, CUBE_VERTICES, Vertex};
 use std::sync::Arc;
 use wgpu::util::DeviceExt;
 use winit::{

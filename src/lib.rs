@@ -1,3 +1,6 @@
+pub mod math;
+pub mod window;
+
 #[repr(C)]
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct Vertex {

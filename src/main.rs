@@ -1,6 +1,4 @@
-mod window;
-
 fn main() {
     env_logger::init();
-    crate::window::init();
+    physics_engine::window::init();
 }
