@@ -45,6 +45,7 @@ struct State {
     camera_bind_group: wgpu::BindGroup,
     camera_uniform: CameraUniform,
     camera_controller: CameraController,
+    depth_texture: wgpu::Texture,
 }
 
 impl State {
@@ -163,11 +164,18 @@ impl State {
                 mask: !0,
                 alpha_to_coverage_enabled: false,
             },
-            depth_stencil: None,
+            depth_stencil: Some(wgpu::DepthStencilState {
+                format: wgpu::TextureFormat::Depth32Float,
+                depth_write_enabled: true,
+                depth_compare: wgpu::CompareFunction::Less,
+                stencil: wgpu::StencilState::default(),
+                bias: wgpu::DepthBiasState::default(),
+            }),
             multiview: None,
             cache: None,
         });
 
+        let depth_texture = Self::create_depth_texture(&device, size);
         let state = State {
             window,
             device,
@@ -184,11 +192,30 @@ impl State {
             camera_bind_group,
             camera_uniform,
             camera_controller,
+            depth_texture,
         };
         state.configure_surface();
         state
     }
-
+    fn create_depth_texture(
+        device: &wgpu::Device,
+        config: winit::dpi::PhysicalSize<u32>,
+    ) -> wgpu::Texture {
+        device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("Depth Texture"),
+            size: wgpu::Extent3d {
+                width: config.width,
+                height: config.height,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Depth32Float,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+            view_formats: &[],
+        })
+    }
     fn get_window(&self) -> &Window {
         &self.window
     }
@@ -211,6 +238,7 @@ impl State {
         self.size = new_size;
         self.camera.aspect_ratio = new_size.width as f32 / new_size.height as f32;
         self.configure_surface();
+        self.depth_texture = Self::create_depth_texture(&self.device, self.size);
     }
 
     fn update(&mut self, dt: Duration) {
@@ -236,6 +264,9 @@ impl State {
             });
 
         let mut encoder = self.device.create_command_encoder(&Default::default());
+        let depth_view = self
+            .depth_texture
+            .create_view(&wgpu::TextureViewDescriptor::default());
         let mut renderpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             label: None,
             color_attachments: &[Some(wgpu::RenderPassColorAttachment {
@@ -247,7 +278,14 @@ impl State {
                     store: wgpu::StoreOp::Store,
                 },
             })],
-            depth_stencil_attachment: None,
+            depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
+                view: &depth_view,
+                depth_ops: Some(wgpu::Operations {
+                    load: wgpu::LoadOp::Clear(1.0),
+                    store: wgpu::StoreOp::Store,
+                }),
+                stencil_ops: None,
+            }),
             timestamp_writes: None,
             occlusion_query_set: None,
         });

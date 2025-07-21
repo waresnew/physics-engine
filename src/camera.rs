@@ -115,6 +115,8 @@ impl CameraController {
         camera.position.y += (self.up - self.down) * SPEED * dt;
         camera.yaw += self.rotate_horizontal * SENS * dt;
         camera.pitch += self.rotate_vertical * SENS * dt;
+        self.rotate_horizontal = 0.0;
+        self.rotate_vertical = 0.0;
         camera.pitch = camera.pitch.clamp(-SAFE_FRAC_PI_2, SAFE_FRAC_PI_2);
     }
 }
