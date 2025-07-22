@@ -10,15 +10,16 @@ pub struct Camera {
     pub aspect_ratio: f32,
 }
 
-//TODO: f32.sin_cos() is an optimization
 impl Camera {
     //moves world so that camera is the origin
     #[rustfmt::skip]
     pub fn calc_view_matrix(&self) -> Mat4 {
+        let (yaw_sin, yaw_cos)=self.yaw.sin_cos();
+        let (pitch_sin, pitch_cos)=self.pitch.sin_cos();
         let forward = Vec3 {
-            x: self.pitch.cos()*self.yaw.sin(),
-            y: self.pitch.sin(),
-            z: -self.pitch.cos()*self.yaw.cos(), // 0 yaw is (0,0,-1) and 90 yaw is (1,0,0)
+            x: pitch_cos*yaw_sin,
+            y: pitch_sin,
+            z: -pitch_cos*yaw_cos, // 0 yaw is (0,0,-1) and 90 yaw is (1,0,0)
         }.normalize();
         let global_up = Vec3 {
             x: 0.0,
@@ -106,15 +107,16 @@ impl CameraController {
         const SENS: f32 = 0.6;
         const SAFE_FRAC_PI_2: f32 = std::f32::consts::FRAC_PI_2 - 0.0001;
         let dt = dt.as_secs_f32();
+        let (yaw_sin, yaw_cos) = camera.yaw.sin_cos();
         let forward = Vec3 {
-            x: camera.yaw.sin(),
+            x: yaw_sin,
             y: 0.0,
-            z: -camera.yaw.cos(),
+            z: -yaw_cos,
         };
         let right = Vec3 {
-            x: camera.yaw.cos(),
+            x: yaw_cos,
             y: 0.0,
-            z: camera.yaw.sin(),
+            z: yaw_sin,
         };
         camera.position += forward * (self.forward - self.backward) * SPEED * dt;
         camera.position += right * (self.right - self.left) * SPEED * dt;
