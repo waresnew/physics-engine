@@ -29,10 +29,10 @@ impl Camera {
         let local_up = right.cross(&forward).normalize();
         Mat4 {
             array: [
-                [right.x, right.y, right.z, -right.dot(&self.position)],
-                [local_up.x, local_up.y, local_up.z, -local_up.dot(&self.position)],
-                [-forward.x, -forward.y, -forward.z, forward.dot(&self.position)],
-                [0.0, 0.0, 0.0, 1.0],
+                        [ right.x,      right.y,      right.z,      -right.dot(&self.position) ],
+                        [ local_up.x,   local_up.y,   local_up.z,   -local_up.dot(&self.position) ],
+                        [ -forward.x,   -forward.y,   -forward.z,    forward.dot(&self.position) ],
+                        [ 0.0,          0.0,          0.0,           1.0 ],
             ],
         }
     }
@@ -45,14 +45,14 @@ impl Camera {
         let f = 1.0 / ((FOV_Y / 2.0).tan());
         Mat4 {
             array: [
-                [f / self.aspect_ratio, 0.0, 0.0, 0.0], //x scaling
+                [f / self.aspect_ratio, 0.0, 0.0, 0.0],
                 [0.0, f, 0.0, 0.0],
                 [
                     0.0,
                     0.0,
                     Z_FAR / (Z_NEAR - Z_FAR),
                     (Z_NEAR * Z_FAR) / (Z_NEAR - Z_FAR),
-                ], //z scaling
+                ],
                 [0.0, 0.0, -1.0, 0.0],
             ],
         }
@@ -124,11 +124,5 @@ impl CameraController {
         self.rotate_horizontal = 0.0;
         self.rotate_vertical = 0.0;
         camera.pitch = camera.pitch.clamp(-SAFE_FRAC_PI_2, SAFE_FRAC_PI_2);
-    }
-}
-
-impl Default for CameraController {
-    fn default() -> Self {
-        Self::new()
     }
 }

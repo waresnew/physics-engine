@@ -1,6 +1,9 @@
+#![allow(clippy::new_without_default)]
+
 pub mod camera;
 pub mod math;
 pub mod window;
+pub mod world;
 
 #[repr(C)]
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]

@@ -65,6 +65,13 @@ impl Neg for Vec3 {
 }
 
 impl Vec3 {
+    pub fn new() -> Self {
+        Self {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        }
+    }
     pub fn mag(&self) -> f32 {
         (self.x * self.x + self.y * self.y + self.z * self.z).sqrt()
     }
@@ -107,11 +114,14 @@ impl Mat4 {
             ],
         }
     }
-}
-
-impl Default for Mat4 {
-    fn default() -> Self {
-        Self::new()
+    pub fn transpose(&self) -> Self {
+        let mut ans = Mat4::new();
+        for i in 0..4 {
+            for j in 0..4 {
+                ans.array[i][j] = self.array[j][i];
+            }
+        }
+        ans
     }
 }
 
@@ -124,6 +134,34 @@ impl Mul for Mat4 {
                 for k in 0..4 {
                     ans.array[i][j] += self.array[i][k] * other.array[k][j];
                 }
+            }
+        }
+        ans
+    }
+}
+
+pub struct Mat3 {
+    pub array: [[f32; 3]; 3],
+}
+
+impl Mat3 {
+    pub fn new() -> Self {
+        Self {
+            array: [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]],
+        }
+    }
+
+    pub fn identity() -> Self {
+        Self {
+            array: [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+        }
+    }
+
+    pub fn transpose(&self) -> Self {
+        let mut ans = Mat3::new();
+        for i in 0..3 {
+            for j in 0..3 {
+                ans.array[i][j] = self.array[j][i];
             }
         }
         ans

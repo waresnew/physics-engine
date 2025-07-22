@@ -1,5 +1,6 @@
 use crate::camera::{Camera, CameraController};
-use crate::math::{Mat4, Vec3};
+use crate::math::{Mat3, Mat4, Vec3};
+use crate::world::{Cuboid, CuboidRaw, World};
 use crate::{CUBE_INDICES, CUBE_VERTICES, Vertex};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -27,7 +28,10 @@ impl CameraUniform {
     }
     pub fn update_view_proj(&mut self, camera: &Camera) {
         // matrix mult is right to left application order
-        self.view_proj = (camera.calc_projection_matrix() * camera.calc_view_matrix()).array;
+        self.view_proj = (camera.calc_projection_matrix() * camera.calc_view_matrix())
+            //wgpu reads a[i] as the first column, so flip my columnmajor representation
+            .transpose()
+            .array;
     }
 }
 struct State {
@@ -47,6 +51,8 @@ struct State {
     camera_uniform: CameraUniform,
     camera_controller: CameraController,
     depth_texture: wgpu::Texture,
+    world: World,
+    instance_buffer: wgpu::Buffer,
 }
 
 impl State {
@@ -145,7 +151,7 @@ impl State {
                 module: &shader,
                 entry_point: Some("vs_main"),
                 compilation_options: Default::default(),
-                buffers: &[Vertex::desc()],
+                buffers: &[Vertex::desc(), CuboidRaw::desc()],
             },
             fragment: Some(wgpu::FragmentState {
                 module: &shader,
@@ -176,6 +182,18 @@ impl State {
             cache: None,
         });
 
+        let world = World::new();
+        let raw_instances = world
+            .instances
+            .iter()
+            .map(Cuboid::to_raw)
+            .collect::<Vec<_>>();
+        let instance_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Instance Buffer"),
+            contents: bytemuck::cast_slice(&raw_instances),
+            usage: wgpu::BufferUsages::VERTEX,
+        });
+
         let depth_texture = Self::create_depth_texture(&device, size);
         let state = State {
             window,
@@ -194,6 +212,8 @@ impl State {
             camera_uniform,
             camera_controller,
             depth_texture,
+            world,
+            instance_buffer,
         };
         state.configure_surface();
         state
@@ -294,8 +314,9 @@ impl State {
         renderpass.set_pipeline(&self.render_pipeline);
         renderpass.set_bind_group(0, &self.camera_bind_group, &[]);
         renderpass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
+        renderpass.set_vertex_buffer(1, self.instance_buffer.slice(..));
         renderpass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
-        renderpass.draw_indexed(0..self.num_indices, 0, 0..1);
+        renderpass.draw_indexed(0..self.num_indices, 0, 0..self.world.instances.len() as u32);
 
         drop(renderpass);
 
