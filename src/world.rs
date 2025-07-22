@@ -24,6 +24,12 @@ impl World {
 
         Self { instances }
     }
+
+    pub fn update(&mut self) {
+        for instance in &mut self.instances {
+            instance.position += Vec3{x:0.0,y:0.01,z:0.0};
+        }
+    }
 }
 
 pub struct Cuboid {
