@@ -19,7 +19,7 @@ fn vs_main(
 ) -> VertexOutput {
     var out: VertexOutput;
     out.color = model.color;
-    out.clip_position = camera.matrix * vec4<f32>(model.position, 1.0);
+    out.clip_position = vec4<f32>(model.position, 1.0) * camera.matrix; //vector*matrix bc the matrix is row-major
     return out;
 }
 

@@ -2,6 +2,7 @@ use std::time::Duration;
 
 use crate::math::{Mat4, Vec3};
 use winit::keyboard::KeyCode;
+#[derive(Debug)]
 pub struct Camera {
     pub position: Vec3,
     pub yaw: f32,
@@ -9,28 +10,28 @@ pub struct Camera {
     pub aspect_ratio: f32,
 }
 
+//TODO: f32.sin_cos() is an optimization
 impl Camera {
     //moves world so that camera is the origin
     #[rustfmt::skip]
     pub fn calc_view_matrix(&self) -> Mat4 {
-        let forward = -Vec3 {
-            x: self.yaw.cos() * self.pitch.cos(), //2d rotation matrix x-component * pitch projection onto XZ
-            //plane
+        let forward = Vec3 {
+            x: self.pitch.cos()*self.yaw.sin(),
             y: self.pitch.sin(),
-            z: self.yaw.sin() * self.pitch.cos(),
-        };
+            z: -self.pitch.cos()*self.yaw.cos(), // 0 yaw is (0,0,-1) and 90 yaw is (1,0,0)
+        }.normalize();
         let global_up = Vec3 {
             x: 0.0,
             y: 1.0,
             z: 0.0,
         };
         let right = forward.cross(&global_up).normalize();
-        let local_up = forward.cross(&right).normalize();
+        let local_up = right.cross(&forward).normalize();
         Mat4 {
             array: [
                 [right.x, right.y, right.z, -right.dot(&self.position)],
                 [local_up.x, local_up.y, local_up.z, -local_up.dot(&self.position)],
-                [forward.x, forward.y, forward.z, -forward.dot(&self.position)],
+                [-forward.x, -forward.y, -forward.z, forward.dot(&self.position)],
                 [0.0, 0.0, 0.0, 1.0],
             ],
         }
@@ -44,10 +45,15 @@ impl Camera {
         let f = 1.0 / ((FOV_Y / 2.0).tan());
         Mat4 {
             array: [
-                [f / self.aspect_ratio, 0.0, 0.0, 0.0],     //x scaling
-                [0.0, f, 0.0, 0.0],                         //y scaling
-                [0.0, 0.0, Z_FAR / (Z_NEAR - Z_FAR), -1.0], //z scaling
-                [0.0, 0.0, (Z_NEAR * Z_FAR) / (Z_NEAR - Z_FAR), 0.0],
+                [f / self.aspect_ratio, 0.0, 0.0, 0.0], //x scaling
+                [0.0, f, 0.0, 0.0],
+                [
+                    0.0,
+                    0.0,
+                    Z_FAR / (Z_NEAR - Z_FAR),
+                    (Z_NEAR * Z_FAR) / (Z_NEAR - Z_FAR),
+                ], //z scaling
+                [0.0, 0.0, -1.0, 0.0],
             ],
         }
     }
@@ -97,24 +103,24 @@ impl CameraController {
 
     pub fn update(&mut self, camera: &mut Camera, dt: Duration) {
         const SPEED: f32 = 4.0;
-        const SENS: f32 = 0.4;
+        const SENS: f32 = 0.6;
         const SAFE_FRAC_PI_2: f32 = std::f32::consts::FRAC_PI_2 - 0.0001;
         let dt = dt.as_secs_f32();
         let forward = Vec3 {
+            x: camera.yaw.sin(),
+            y: 0.0,
+            z: -camera.yaw.cos(),
+        };
+        let right = Vec3 {
             x: camera.yaw.cos(),
             y: 0.0,
             z: camera.yaw.sin(),
-        };
-        let right = Vec3 {
-            x: -camera.yaw.sin(),
-            y: 0.0,
-            z: camera.yaw.cos(),
         };
         camera.position += forward * (self.forward - self.backward) * SPEED * dt;
         camera.position += right * (self.right - self.left) * SPEED * dt;
         camera.position.y += (self.up - self.down) * SPEED * dt;
         camera.yaw += self.rotate_horizontal * SENS * dt;
-        camera.pitch += self.rotate_vertical * SENS * dt;
+        camera.pitch -= self.rotate_vertical * SENS * dt;
         self.rotate_horizontal = 0.0;
         self.rotate_vertical = 0.0;
         camera.pitch = camera.pitch.clamp(-SAFE_FRAC_PI_2, SAFE_FRAC_PI_2);

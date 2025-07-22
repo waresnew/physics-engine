@@ -22,10 +22,11 @@ struct CameraUniform {
 impl CameraUniform {
     pub fn new() -> Self {
         Self {
-            view_proj: Mat4::new().array,
+            view_proj: Mat4::identity().array,
         }
     }
     pub fn update_view_proj(&mut self, camera: &Camera) {
+        // matrix mult is right to left application order
         self.view_proj = (camera.calc_projection_matrix() * camera.calc_view_matrix()).array;
     }
 }
@@ -81,8 +82,8 @@ impl State {
         let camera = Camera {
             position: Vec3 {
                 x: 0.0,
-                y: 0.0,
-                z: 10.0,
+                y: 1.0,
+                z: 2.0,
             },
             pitch: 0.0,
             yaw: 0.0,
