@@ -81,7 +81,7 @@ impl State {
         let camera = Camera {
             position: Vec3 {
                 x: 0.0,
-                y: 5.0,
+                y: 0.0,
                 z: 10.0,
             },
             pitch: 0.0,
