@@ -89,39 +89,33 @@ impl Vec3 {
         }
     }
 }
+//1d array so i can enforce column major when sending to shader
 pub struct Mat4 {
-    pub array: [[f32; 4]; 4],
+    pub array: [f32; 16],
 }
 
 impl Mat4 {
+    #[rustfmt::skip]
     pub fn new() -> Self {
         Self {
             array: [
-                [0.0, 0.0, 0.0, 0.0],
-                [0.0, 0.0, 0.0, 0.0],
-                [0.0, 0.0, 0.0, 0.0],
-                [0.0, 0.0, 0.0, 0.0],
+                0.0, 0.0, 0.0, 0.0,
+                0.0, 0.0, 0.0, 0.0,
+                0.0, 0.0, 0.0, 0.0,
+                0.0, 0.0, 0.0, 0.0,
             ],
         }
     }
+    #[rustfmt::skip]
     pub fn identity() -> Self {
         Self {
             array: [
-                [1.0, 0.0, 0.0, 0.0],
-                [0.0, 1.0, 0.0, 0.0],
-                [0.0, 0.0, 1.0, 0.0],
-                [0.0, 0.0, 0.0, 1.0],
+                1.0, 0.0, 0.0, 0.0,
+                0.0, 1.0, 0.0, 0.0,
+                0.0, 0.0, 1.0, 0.0,
+                0.0, 0.0, 0.0, 1.0,
             ],
         }
-    }
-    pub fn transpose(&self) -> Self {
-        let mut ans = Mat4::new();
-        for i in 0..4 {
-            for j in 0..4 {
-                ans.array[i][j] = self.array[j][i];
-            }
-        }
-        ans
     }
 }
 
@@ -129,10 +123,10 @@ impl Mul for Mat4 {
     type Output = Self;
     fn mul(self, other: Self) -> Self {
         let mut ans = Mat4::new();
-        for i in 0..4 {
-            for j in 0..4 {
+        for col in 0..4 {
+            for row in 0..4 {
                 for k in 0..4 {
-                    ans.array[i][j] += self.array[i][k] * other.array[k][j];
+                    ans.array[col * 4 + row] += self.array[k * 4 + row] * other.array[col * 4 + k];
                 }
             }
         }
@@ -141,29 +135,29 @@ impl Mul for Mat4 {
 }
 
 pub struct Mat3 {
-    pub array: [[f32; 3]; 3],
+    pub array: [f32; 9],
 }
 
 impl Mat3 {
+    #[rustfmt::skip]
     pub fn new() -> Self {
         Self {
-            array: [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]],
+            array: [
+                0.0, 0.0, 0.0,
+                0.0, 0.0, 0.0,
+                0.0, 0.0, 0.0,
+            ],
         }
     }
 
+    #[rustfmt::skip]
     pub fn identity() -> Self {
         Self {
-            array: [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+            array: [
+                1.0, 0.0, 0.0,
+                0.0, 1.0, 0.0,
+                0.0, 0.0, 1.0,
+            ],
         }
-    }
-
-    pub fn transpose(&self) -> Self {
-        let mut ans = Mat3::new();
-        for i in 0..3 {
-            for j in 0..3 {
-                ans.array[i][j] = self.array[j][i];
-            }
-        }
-        ans
     }
 }

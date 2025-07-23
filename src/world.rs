@@ -1,4 +1,3 @@
-
 use crate::math::{Mat3, Mat4, Vec3};
 
 pub struct World {
@@ -26,7 +25,7 @@ impl World {
         Self { instances }
     }
 
-    pub fn update(&mut self, dt:f32) {
+    pub fn update(&mut self, dt: f32) {
         for instance in &mut self.instances {
             // instance.position += Vec3{x:0.0,y:0.01,z:0.0};
         }
@@ -40,7 +39,7 @@ pub struct Cuboid {
 #[repr(C)]
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct CuboidRaw {
-    model: [[f32; 4]; 4],
+    model: [f32; 16],
 }
 
 impl CuboidRaw {
@@ -67,17 +66,15 @@ impl Cuboid {
 
     #[rustfmt::skip]
     pub fn to_raw(&self)->CuboidRaw {
-        let mut temp=Mat4::new();
-        temp.array=[
-                [self.rotation.array[0][0], self.rotation.array[0][1], self.rotation.array[0][2], self.position.x],
-                [self.rotation.array[1][0], self.rotation.array[1][1], self.rotation.array[1][2],self.position.y],
-                [self.rotation.array[2][0], self.rotation.array[2][1], self.rotation.array[2][2],self.position.z],
-                [0.0, 0.0, 0.0, 1.0]
-        ];
 
 
         CuboidRaw {
-            model:temp.transpose().array         
+            model:[
+                    self.rotation.array[0], self.rotation.array[3], self.rotation.array[6], 0.0,
+                    self.rotation.array[1], self.rotation.array[4], self.rotation.array[7], 0.0,
+                    self.rotation.array[2], self.rotation.array[5], self.rotation.array[8], 0.0,
+                    self.position.x,        self.position.y,        self.position.z,        1.0,
+            ]
         }
     }
 }

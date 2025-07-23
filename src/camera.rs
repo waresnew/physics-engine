@@ -30,15 +30,16 @@ impl Camera {
         let local_up = right.cross(&forward).normalize();
         Mat4 {
             array: [
-                        [ right.x,      right.y,      right.z,      -right.dot(&self.position) ],
-                        [ local_up.x,   local_up.y,   local_up.z,   -local_up.dot(&self.position) ],
-                        [ -forward.x,   -forward.y,   -forward.z,    forward.dot(&self.position) ],
-                        [ 0.0,          0.0,          0.0,           1.0 ],
+                right.x,      local_up.x,   -forward.x,   0.0,
+                right.y,      local_up.y,   -forward.y,   0.0,
+                right.z,      local_up.z,   -forward.z,   0.0,
+                -right.dot(&self.position), -local_up.dot(&self.position), forward.dot(&self.position), 1.0,
             ],
         }
     }
 
     //squash world for perspective
+    #[rustfmt::skip]
     pub fn calc_projection_matrix(&self) -> Mat4 {
         const Z_NEAR: f32 = 0.1;
         const Z_FAR: f32 = 100.0; //min and max distance from camera
@@ -46,15 +47,10 @@ impl Camera {
         let f = 1.0 / ((FOV_Y / 2.0).tan());
         Mat4 {
             array: [
-                [f / self.aspect_ratio, 0.0, 0.0, 0.0],
-                [0.0, f, 0.0, 0.0],
-                [
-                    0.0,
-                    0.0,
-                    Z_FAR / (Z_NEAR - Z_FAR),
-                    (Z_NEAR * Z_FAR) / (Z_NEAR - Z_FAR),
-                ],
-                [0.0, 0.0, -1.0, 0.0],
+                f / self.aspect_ratio, 0.0,                        0.0,                      0.0,
+                0.0,                   f,                          0.0,                      0.0,
+                0.0,                   0.0,            Z_FAR / (Z_NEAR - Z_FAR),            -1.0,
+                0.0,                   0.0,         (Z_NEAR * Z_FAR) / (Z_NEAR - Z_FAR),     0.0,
             ],
         }
     }

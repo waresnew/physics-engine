@@ -18,9 +18,9 @@ use winit::{
 #[repr(C)]
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 struct CameraUniform {
-    view_proj: [[f32; 4]; 4], //64 bytes
-    view_pos: [f32; 3],       //12 bytes
-    _padding1: f32,           //4 bytes
+    view_proj: [f32; 16], //64 bytes
+    view_pos: [f32; 3],   //12 bytes
+    _padding1: f32,       //4 bytes
 }
 impl CameraUniform {
     pub fn new() -> Self {
@@ -33,10 +33,7 @@ impl CameraUniform {
     pub fn update_camera_uniform(&mut self, camera: &Camera) {
         self.view_pos = [camera.position.x, camera.position.y, camera.position.z];
         // matrix mult is right to left application order
-        self.view_proj = (camera.calc_projection_matrix() * camera.calc_view_matrix())
-            //wgpu reads a[i] as the first column, so flip my columnmajor representation
-            .transpose()
-            .array;
+        self.view_proj = (camera.calc_projection_matrix() * camera.calc_view_matrix()).array;
     }
 }
 struct State {
