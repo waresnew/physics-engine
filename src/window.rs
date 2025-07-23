@@ -1,5 +1,5 @@
 use crate::camera::{Camera, CameraController};
-use crate::math::{Mat3, Mat4, Vec3};
+use crate::math::{Mat4, Vec3};
 use crate::world::{Cuboid, CuboidRaw, World};
 use crate::{CUBE_INDICES, CUBE_VERTICES, Vertex};
 use std::sync::Arc;

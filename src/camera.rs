@@ -29,6 +29,7 @@ impl Camera {
         let local_up = right.cross(&forward).normalize();
         Mat4 {
             array: [
+                //each row is a column
                 right.x,      local_up.x,   -forward.x,   0.0,
                 right.y,      local_up.y,   -forward.y,   0.0,
                 right.z,      local_up.z,   -forward.z,   0.0,
@@ -45,11 +46,13 @@ impl Camera {
         let f = 1.0 / ((FOV_Y / 2.0).tan());
         Mat4 {
             array: [
+                //each row is a column
                 f / self.aspect_ratio, 0.0,                        0.0,                      0.0,
                 0.0,                   f,                          0.0,                      0.0,
                 0.0,                   0.0,            Z_FAR / (Z_NEAR - Z_FAR),            -1.0,
                 0.0,                   0.0,         (Z_NEAR * Z_FAR) / (Z_NEAR - Z_FAR),     0.0,
             ],
+            //seems like the gpu automatically divides by -z to normalize z-coords -> creates nonlinear depth
         }
     }
 }

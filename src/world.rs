@@ -1,4 +1,4 @@
-use crate::math::{Mat3, Mat4, Vec3};
+use crate::math::{Mat3, Vec3};
 
 pub struct World {
     pub instances: Vec<Cuboid>,
@@ -66,8 +66,6 @@ impl Cuboid {
 
     #[rustfmt::skip]
     pub fn to_raw(&self)->CuboidRaw {
-
-
         CuboidRaw {
             model:[
                     self.rotation.array[0], self.rotation.array[3], self.rotation.array[6], 0.0,
