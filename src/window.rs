@@ -270,7 +270,7 @@ impl State {
             0,
             bytemuck::cast_slice(&[self.camera_uniform]),
         );
-        self.world.update();
+        self.world.update(dt.as_secs_f32());
         let raw_instances = self
             .world
             .instances

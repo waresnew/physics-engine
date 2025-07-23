@@ -1,3 +1,4 @@
+
 use crate::math::{Mat3, Mat4, Vec3};
 
 pub struct World {
@@ -25,9 +26,9 @@ impl World {
         Self { instances }
     }
 
-    pub fn update(&mut self) {
+    pub fn update(&mut self, dt:f32) {
         for instance in &mut self.instances {
-            instance.position += Vec3{x:0.0,y:0.01,z:0.0};
+            // instance.position += Vec3{x:0.0,y:0.01,z:0.0};
         }
     }
 }
@@ -45,7 +46,7 @@ pub struct CuboidRaw {
 impl CuboidRaw {
     //4 vec4s = 1 mat4
     const ATTRIBUTES: [wgpu::VertexAttribute; 4] =
-        wgpu::vertex_attr_array![2=>Float32x4,3=>Float32x4,4=>Float32x4,5=>Float32x4];
+        wgpu::vertex_attr_array![3=>Float32x4,4=>Float32x4,5=>Float32x4,6=>Float32x4];
     pub fn desc() -> wgpu::VertexBufferLayout<'static> {
         use std::mem;
         wgpu::VertexBufferLayout {
