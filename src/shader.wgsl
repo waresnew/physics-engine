@@ -6,9 +6,11 @@ struct InstanceInput {
 }
 struct CameraUniform {
     matrix: mat4x4<f32>,
+    view_pos: vec3<f32>,
+    _padding1: f32
 };
 @group(0) @binding(0)
-var<uniform> camera:CameraUniform;
+var<uniform> camera: CameraUniform;
 struct VertexInput {
     @location(0) position: vec3<f32>,
     @location(1) color: vec3<f32>,
@@ -47,15 +49,22 @@ fn srgb_to_linear(colour: f32) -> f32 {
 }
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    let light_position = normalize(vec3<f32>(1.0, 2.0, 1.0));
+    let light_position = normalize(vec3<f32>(2.0, 4.0, 2.0));
     let light_dir = normalize(light_position - in.world_position); //point light
     let linear_colour = vec3<f32>(
         srgb_to_linear(in.color.r),
         srgb_to_linear(in.color.g),
         srgb_to_linear(in.color.b)
     );
+    //lambertian diffuse
     let diffuse = max(dot(in.normal, light_dir), 0.0);
-    let ambient = 0.2;
-    let shade = vec3<f32>(1.0, 1.0, 1.0) * (diffuse + ambient);
+
+    //blinn-phong specular
+    let view_dir = normalize(camera.view_pos.xyz - in.world_position);
+    let half_dir = normalize(view_dir + light_dir);
+    let specular = pow(max(dot(view_dir, half_dir), 0.0), 32.0);
+
+    let ambient = 0.1;
+    let shade = vec3<f32>(1.0, 1.0, 1.0) * (specular + diffuse + ambient);
     return vec4<f32>(linear_colour * shade, 1.0);
 }

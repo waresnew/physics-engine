@@ -18,15 +18,20 @@ use winit::{
 #[repr(C)]
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 struct CameraUniform {
-    view_proj: [[f32; 4]; 4],
+    view_proj: [[f32; 4]; 4], //64 bytes
+    view_pos: [f32; 3],       //12 bytes
+    _padding1: f32,           //4 bytes
 }
 impl CameraUniform {
     pub fn new() -> Self {
         Self {
             view_proj: Mat4::identity().array,
+            view_pos: [0.0, 0.0, 0.0],
+            _padding1: 0.0,
         }
     }
-    pub fn update_view_proj(&mut self, camera: &Camera) {
+    pub fn update_camera_uniform(&mut self, camera: &Camera) {
+        self.view_pos = [camera.position.x, camera.position.y, camera.position.z];
         // matrix mult is right to left application order
         self.view_proj = (camera.calc_projection_matrix() * camera.calc_view_matrix())
             //wgpu reads a[i] as the first column, so flip my columnmajor representation
@@ -99,7 +104,7 @@ impl State {
         let camera_controller = CameraController::new();
 
         let mut camera_uniform = CameraUniform::new();
-        camera_uniform.update_view_proj(&camera);
+        camera_uniform.update_camera_uniform(&camera);
         let camera_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Camera Buffer"),
             contents: bytemuck::cast_slice(&[camera_uniform]),
@@ -110,7 +115,7 @@ impl State {
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                 entries: &[wgpu::BindGroupLayoutEntry {
                     binding: 0,
-                    visibility: wgpu::ShaderStages::VERTEX,
+                    visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
                     ty: wgpu::BindingType::Buffer {
                         ty: wgpu::BufferBindingType::Uniform,
                         has_dynamic_offset: false,
@@ -264,7 +269,7 @@ impl State {
 
     fn update(&mut self, dt: Duration) {
         self.camera_controller.update(&mut self.camera, dt);
-        self.camera_uniform.update_view_proj(&self.camera);
+        self.camera_uniform.update_camera_uniform(&self.camera);
         self.queue.write_buffer(
             &self.camera_buffer,
             0,
