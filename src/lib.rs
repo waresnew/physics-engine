@@ -30,44 +30,128 @@ pub const CUBE_VERTICES: &[Vertex] = &[
     // front face
     Vertex {
         position: [0.5, -0.5, 0.5],
-        colour: [1.0, 0.0, 0.0],
-        normal: [1.0, -1.0, 1.0],
+        colour: [0.8627, 0.0784, 0.2353],
+        normal: [0.0, 0.0, 1.0],
     },
     Vertex {
         position: [0.5, 0.5, 0.5],
-        colour: [1.0, 0.0, 0.0],
-        normal: [1.0, 1.0, 1.0],
+        colour: [0.8627, 0.0784, 0.2353],
+        normal: [0.0, 0.0, 1.0],
     },
     Vertex {
         position: [-0.5, 0.5, 0.5],
-        colour: [1.0, 0.0, 0.0],
-        normal: [-1.0, 1.0, 1.0],
+        colour: [0.8627, 0.0784, 0.2353],
+        normal: [0.0, 0.0, 1.0],
     },
     Vertex {
         position: [-0.5, -0.5, 0.5],
-        colour: [1.0, 0.0, 0.0],
-        normal: [-1.0, -1.0, 1.0],
+        colour: [0.8627, 0.0784, 0.2353],
+        normal: [0.0, 0.0, 1.0],
     },
     // back face
     Vertex {
         position: [-0.5, -0.5, -0.5],
-        colour: [0.0, 0.0, 1.0],
-        normal: [-1.0, -1.0, -1.0],
+        colour: [0.8627, 0.0784, 0.2353],
+        normal: [0.0, 0.0, -1.0],
     },
     Vertex {
         position: [-0.5, 0.5, -0.5],
-        colour: [0.0, 0.0, 1.0],
-        normal: [-1.0, 1.0, -1.0],
+        colour: [0.8627, 0.0784, 0.2353],
+        normal: [0.0, 0.0, -1.0],
     },
     Vertex {
         position: [0.5, 0.5, -0.5],
-        colour: [0.0, 0.0, 1.0],
-        normal: [1.0, 1.0, -1.0],
+        colour: [0.8627, 0.0784, 0.2353],
+        normal: [0.0, 0.0, -1.0],
     },
     Vertex {
         position: [0.5, -0.5, -0.5],
-        colour: [0.0, 0.0, 1.0],
-        normal: [1.0, -1.0, -1.0],
+        colour: [0.8627, 0.0784, 0.2353],
+        normal: [0.0, 0.0, -1.0],
+    },
+    //left face
+    Vertex {
+        position: [-0.5, -0.5, 0.5],
+        colour: [0.8627, 0.0784, 0.2353],
+        normal: [-1.0, 0.0, 0.0],
+    },
+    Vertex {
+        position: [-0.5, 0.5, 0.5],
+        colour: [0.8627, 0.0784, 0.2353],
+        normal: [-1.0, 0.0, 0.0],
+    },
+    Vertex {
+        position: [-0.5, 0.5, -0.5],
+        colour: [0.8627, 0.0784, 0.2353],
+        normal: [-1.0, 0.0, 0.0],
+    },
+    Vertex {
+        position: [-0.5, -0.5, -0.5],
+        colour: [0.8627, 0.0784, 0.2353],
+        normal: [-1.0, 0.0, 0.0],
+    },
+    //right face
+    Vertex {
+        position: [0.5, -0.5, -0.5],
+        colour: [0.8627, 0.0784, 0.2353],
+        normal: [1.0, 0.0, 0.0],
+    },
+    Vertex {
+        position: [0.5, 0.5, -0.5],
+        colour: [0.8627, 0.0784, 0.2353],
+        normal: [1.0, 0.0, 0.0],
+    },
+    Vertex {
+        position: [0.5, 0.5, 0.5],
+        colour: [0.8627, 0.0784, 0.2353],
+        normal: [1.0, 0.0, 0.0],
+    },
+    Vertex {
+        position: [0.5, -0.5, 0.5],
+        colour: [0.8627, 0.0784, 0.2353],
+        normal: [1.0, 0.0, 0.0],
+    },
+    //top face
+    Vertex {
+        position: [0.5, 0.5, 0.5],
+        colour: [0.8627, 0.0784, 0.2353],
+        normal: [0.0, 1.0, 0.0],
+    },
+    Vertex {
+        position: [0.5, 0.5, -0.5],
+        colour: [0.8627, 0.0784, 0.2353],
+        normal: [0.0, 1.0, 0.0],
+    },
+    Vertex {
+        position: [-0.5, 0.5, -0.5],
+        colour: [0.8627, 0.0784, 0.2353],
+        normal: [0.0, 1.0, 0.0],
+    },
+    Vertex {
+        position: [-0.5, 0.5, 0.5],
+        colour: [0.8627, 0.0784, 0.2353],
+        normal: [0.0, 1.0, 0.0],
+    },
+    //bottom face
+    Vertex {
+        position: [-0.5, -0.5, 0.5],
+        colour: [0.8627, 0.0784, 0.2353],
+        normal: [0.0, -1.0, 0.0],
+    },
+    Vertex {
+        position: [-0.5, -0.5, -0.5],
+        colour: [0.8627, 0.0784, 0.2353],
+        normal: [0.0, -1.0, 0.0],
+    },
+    Vertex {
+        position: [0.5, -0.5, -0.5],
+        colour: [0.8627, 0.0784, 0.2353],
+        normal: [0.0, -1.0, 0.0],
+    },
+    Vertex {
+        position: [0.5, -0.5, 0.5],
+        colour: [0.8627, 0.0784, 0.2353],
+        normal: [0.0, -1.0, 0.0],
     },
 ];
 
@@ -80,168 +164,16 @@ pub const CUBE_INDICES: &[u16] = &[
     //back face
     4,5,6,
     6,7,4,
-    //top face
-    1,6,5,
-    5,2,1,
-    //bottom face
-    7,0,3,
-    3,4,7,
     //left face
-    3,2,5,
-    5,4,3,
+    8,9,10,
+    10,11,8,
     //right face
-    7,6,1,
-    1,0,7
+    12,13,14,
+    14,15,12,
+    //top face
+    16,17,18,
+    18,19,16,
+    //bottom face
+    20,21,22,
+    22,23,20
 ];
-// pub const CUBE_VERTICES: &[Vertex] = &[
-//     // z axis is outward, x is right, y is up
-//     // front face
-//     Vertex {
-//         position: [0.5, -0.5, 0.5],
-//         colour: [1.0, 0.0, 0.0],
-//         normal: [0.0, 0.0, 1.0],
-//     },
-//     Vertex {
-//         position: [0.5, 0.5, 0.5],
-//         colour: [1.0, 0.0, 0.0],
-//         normal: [0.0, 0.0, 1.0],
-//     },
-//     Vertex {
-//         position: [-0.5, 0.5, 0.5],
-//         colour: [1.0, 0.0, 0.0],
-//         normal: [0.0, 0.0, 1.0],
-//     },
-//     Vertex {
-//         position: [-0.5, -0.5, 0.5],
-//         colour: [1.0, 0.0, 0.0],
-//         normal: [0.0, 0.0, 1.0],
-//     },
-//     // back face
-//     Vertex {
-//         position: [-0.5, -0.5, -0.5],
-//         colour: [0.0, 0.0, 1.0],
-//         normal: [0.0, 0.0, -1.0],
-//     },
-//     Vertex {
-//         position: [-0.5, 0.5, -0.5],
-//         colour: [0.0, 0.0, 1.0],
-//         normal: [0.0, 0.0, -1.0],
-//     },
-//     Vertex {
-//         position: [0.5, 0.5, -0.5],
-//         colour: [0.0, 0.0, 1.0],
-//         normal: [0.0, 0.0, -1.0],
-//     },
-//     Vertex {
-//         position: [0.5, -0.5, -0.5],
-//         colour: [0.0, 0.0, 1.0],
-//         normal: [0.0, 0.0, -1.0],
-//     },
-//     //left face
-//     Vertex {
-//         position: [-0.5, -0.5, 0.5],
-//         colour: [1.0, 1.0, 0.0],
-//         normal: [-1.0, 0.0, 0.0],
-//     },
-//     Vertex {
-//         position: [-0.5, 0.5, 0.5],
-//         colour: [1.0, 1.0, 0.0],
-//         normal: [-1.0, 0.0, 0.0],
-//     },
-//     Vertex {
-//         position: [-0.5, 0.5, -0.5],
-//         colour: [1.0, 1.0, 0.0],
-//         normal: [-1.0, 0.0, 0.0],
-//     },
-//     Vertex {
-//         position: [-0.5, -0.5, -0.5],
-//         colour: [1.0, 1.0, 0.0],
-//         normal: [-1.0, 0.0, 0.0],
-//     },
-//     //right face
-//     Vertex {
-//         position: [0.5, -0.5, -0.5],
-//         colour: [1.0, 0.0, 1.0],
-//         normal: [1.0, 0.0, 0.0],
-//     },
-//     Vertex {
-//         position: [0.5, 0.5, -0.5],
-//         colour: [1.0, 0.0, 1.0],
-//         normal: [1.0, 0.0, 0.0],
-//     },
-//     Vertex {
-//         position: [0.5, 0.5, 0.5],
-//         colour: [1.0, 0.0, 1.0],
-//         normal: [1.0, 0.0, 0.0],
-//     },
-//     Vertex {
-//         position: [0.5, -0.5, 0.5],
-//         colour: [1.0, 0.0, 1.0],
-//         normal: [1.0, 0.0, 0.0],
-//     },
-//     //top face
-//     Vertex {
-//         position: [0.5, 0.5, 0.5],
-//         colour: [0.0, 1.0, 0.0],
-//         normal: [0.0, 1.0, 0.0],
-//     },
-//     Vertex {
-//         position: [0.5, 0.5, -0.5],
-//         colour: [0.0, 1.0, 0.0],
-//         normal: [0.0, 1.0, 0.0],
-//     },
-//     Vertex {
-//         position: [-0.5, 0.5, -0.5],
-//         colour: [0.0, 1.0, 0.0],
-//         normal: [0.0, 1.0, 0.0],
-//     },
-//     Vertex {
-//         position: [-0.5, 0.5, 0.5],
-//         colour: [0.0, 1.0, 0.0],
-//         normal: [0.0, 1.0, 0.0],
-//     },
-//     //bottom face
-//     Vertex {
-//         position: [-0.5, -0.5, 0.5],
-//         colour: [0.0, 1.0, 1.0],
-//         normal: [0.0, -1.0, 0.0],
-//     },
-//     Vertex {
-//         position: [-0.5, -0.5, -0.5],
-//         colour: [0.0, 1.0, 1.0],
-//         normal: [0.0, -1.0, 0.0],
-//     },
-//     Vertex {
-//         position: [0.5, -0.5, -0.5],
-//         colour: [0.0, 1.0, 1.0],
-//         normal: [0.0, -1.0, 0.0],
-//     },
-//     Vertex {
-//         position: [0.5, -0.5, 0.5],
-//         colour: [0.0, 1.0, 1.0],
-//         normal: [0.0, -1.0, 0.0],
-//     },
-// ];
-//
-// #[rustfmt::skip]
-// pub const CUBE_INDICES: &[u16] = &[
-//     // each triangle's vertices are defined CCW order if i were to look at it head on
-//     // front face
-//     0,1,2,
-//     2,3,0,
-//     //back face
-//     4,5,6,
-//     6,7,4,
-//     //left face
-//     8,9,10,
-//     10,11,8,
-//     //right face
-//     12,13,14,
-//     14,15,12,
-//     //top face
-//     16,17,18,
-//     18,19,16,
-//     //bottom face
-//     20,21,22,
-//     22,23,20
-// ];

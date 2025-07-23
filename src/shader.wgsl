@@ -18,7 +18,8 @@ struct VertexInput {
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
     @location(0) color: vec3<f32>,
-    @location(1) normal: vec3<f32>
+    @location(1) normal: vec3<f32>,
+    @location(2) world_position: vec3<f32>
 };
 
 @vertex
@@ -35,15 +36,26 @@ fn vs_main(
     var out: VertexOutput;
     out.color = model.color;
     out.normal = normalize((model_matrix * vec4<f32>(model.normal, 0.0)).xyz);
-    out.clip_position = camera.matrix * model_matrix * vec4<f32>(model.position, 1.0);
+    let world_position: vec4<f32> = model_matrix * vec4<f32>(model.position, 1.0);
+    out.world_position = world_position.xyz;
+    out.clip_position = camera.matrix * world_position;
     return out;
 }
 
+fn srgb_to_linear(colour: f32) -> f32 {
+    return pow((colour + 0.055) / 1.055, 2.4);
+}
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    let light_pos = normalize(vec3<f32>(1.0, 2.0, 1.0));
-    let diffuse = max(dot(in.normal, light_pos), 0.0);
-    let ambient = 0.1;
+    let light_position = normalize(vec3<f32>(1.0, 2.0, 1.0));
+    let light_dir = normalize(light_position - in.world_position); //point light
+    let linear_colour = vec3<f32>(
+        srgb_to_linear(in.color.r),
+        srgb_to_linear(in.color.g),
+        srgb_to_linear(in.color.b)
+    );
+    let diffuse = max(dot(in.normal, light_dir), 0.0);
+    let ambient = 0.2;
     let shade = vec3<f32>(1.0, 1.0, 1.0) * (diffuse + ambient);
-    return vec4<f32>(in.color * shade, 1.0);
+    return vec4<f32>(linear_colour * shade, 1.0);
 }
