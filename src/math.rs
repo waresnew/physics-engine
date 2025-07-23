@@ -90,6 +90,8 @@ impl Vec3 {
     }
 }
 //1d array so i can enforce column major when sending to shader
+// note that wgpu expects contiguous cells to represent a column, so each "row" i specify is
+// actually a column from top-bottom
 pub struct Mat4 {
     pub array: [f32; 16],
 }

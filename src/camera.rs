@@ -11,7 +11,6 @@ pub struct Camera {
 }
 
 impl Camera {
-    //moves world so that camera is the origin
     #[rustfmt::skip]
     pub fn calc_view_matrix(&self) -> Mat4 {
         let (yaw_sin, yaw_cos)=self.yaw.sin_cos();
@@ -38,11 +37,10 @@ impl Camera {
         }
     }
 
-    //squash world for perspective
     #[rustfmt::skip]
     pub fn calc_projection_matrix(&self) -> Mat4 {
         const Z_NEAR: f32 = 0.1;
-        const Z_FAR: f32 = 100.0; //min and max distance from camera
+        const Z_FAR: f32 = 100.0; 
         const FOV_Y: f32 = std::f32::consts::PI / 2.0;
         let f = 1.0 / ((FOV_Y / 2.0).tan());
         Mat4 {
