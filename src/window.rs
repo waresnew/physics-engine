@@ -161,7 +161,6 @@ impl State {
         let depth_texture = Self::create_depth_texture(&device, size);
 
         let render_pipeline = Self::make_pipeline(
-            "Render Pipeline",
             &device,
             &shader,
             &render_pipeline_layout,
@@ -172,7 +171,6 @@ impl State {
         );
 
         let floor_pipeline = Self::make_pipeline(
-            "Floor Render Pipeline",
             &device,
             &shader,
             &render_pipeline_layout,
@@ -226,7 +224,6 @@ impl State {
         })
     }
     fn make_pipeline(
-        label: &str,
         device: &wgpu::Device,
         shader: &wgpu::ShaderModule,
         render_pipeline_layout: &wgpu::PipelineLayout,
@@ -236,7 +233,7 @@ impl State {
         cull: bool,
     ) -> wgpu::RenderPipeline {
         device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some(label),
+            label: Some(vertex_entry_point),
             layout: Some(render_pipeline_layout),
             primitive: wgpu::PrimitiveState {
                 topology: wgpu::PrimitiveTopology::TriangleList,

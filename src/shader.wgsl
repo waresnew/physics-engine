@@ -67,7 +67,6 @@ fn srgb_to_linear(colour: f32) -> f32 {
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let light_dir = normalize(vec3<f32>(2.0, 4.0, 2.0));
-    // let light_dir = normalize(light_position - in.world_position); //point light
     let linear_colour = vec3<f32>(
         srgb_to_linear(in.color.r),
         srgb_to_linear(in.color.g),
@@ -79,9 +78,14 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     //blinn-phong specular
     let view_dir = normalize(camera.view_pos.xyz - in.world_position);
     let half_dir = normalize(view_dir + light_dir);
-    let specular = pow(max(dot(view_dir, half_dir), 0.0), 32.0);
+    let specular = pow(max(dot(in.normal, half_dir), 0.0), 32.0);
+
+    //fresnel factor, schlick approximation
+    let R0 = vec3<f32>(0.04);
+    let fresnel_cos = max(dot(view_dir, in.normal), 0.0);
+    let fresnel = R0 + (vec3<f32>(1.0) - R0) * pow(1 - fresnel_cos, 5.0);
 
     let ambient = 0.1;
-    let shade = vec3<f32>(1.0, 1.0, 1.0) * (specular + diffuse + ambient);
+    let shade = vec3<f32>(1.0, 1.0, 1.0) * (specular * fresnel + diffuse + ambient);
     return vec4<f32>(linear_colour * shade, 1.0);
 }
