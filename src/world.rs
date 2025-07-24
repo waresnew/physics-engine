@@ -1,4 +1,4 @@
-use crate::math::{Mat3, Vec3};
+use crate::math::{Quaternion, Vec3};
 
 pub struct World {
     pub instances: Vec<Cuboid>,
@@ -16,7 +16,7 @@ impl World {
                         y: 0.0,
                         z: z as f32 * INSTANCE_SPACING,
                     };
-                    let rotation = Mat3::identity();
+                    let rotation = Quaternion::identity();
                     Cuboid { position, rotation }
                 })
             })
@@ -27,14 +27,27 @@ impl World {
 
     pub fn update(&mut self, dt: f32) {
         for instance in &mut self.instances {
-            // instance.position += Vec3{x:0.0,y:0.01,z:0.0};
+            // instance.position += Vec3 {
+            //     x: 0.0,
+            //     y: 0.01,
+            //     z: 0.01,
+            // };
+            instance.rotation = instance.rotation
+                * Quaternion::from_angle(
+                    &Vec3 {
+                        x: 1.0,
+                        y: 1.0,
+                        z: 0.0,
+                    },
+                    0.02,
+                );
         }
     }
 }
 
 pub struct Cuboid {
-    position: Vec3,
-    rotation: Mat3,
+    position: Vec3, //centre
+    rotation: Quaternion,
 }
 #[repr(C)]
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
@@ -60,17 +73,18 @@ impl Cuboid {
     pub fn new() -> Self {
         Self {
             position: Vec3::new(),
-            rotation: Mat3::identity(),
+            rotation: Quaternion::identity(),
         }
     }
 
     #[rustfmt::skip]
     pub fn to_raw(&self)->CuboidRaw {
+        let rotation_matrix=self.rotation.normalize().to_mat3();
         CuboidRaw {
             model:[
-                    self.rotation.array[0], self.rotation.array[3], self.rotation.array[6], 0.0,
-                    self.rotation.array[1], self.rotation.array[4], self.rotation.array[7], 0.0,
-                    self.rotation.array[2], self.rotation.array[5], self.rotation.array[8], 0.0,
+                    rotation_matrix.array[0], rotation_matrix.array[3], rotation_matrix.array[6], 0.0,
+                    rotation_matrix.array[1], rotation_matrix.array[4], rotation_matrix.array[7], 0.0,
+                    rotation_matrix.array[2], rotation_matrix.array[5], rotation_matrix.array[8], 0.0,
                     self.position.x,        self.position.y,        self.position.z,        1.0,
             ]
         }
