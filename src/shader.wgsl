@@ -66,7 +66,8 @@ fn srgb_to_linear(colour: f32) -> f32 {
 }
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    let light_dir = normalize(vec3<f32>(2.0, 4.0, 2.0));
+    let light_dir = normalize(vec3<f32>(0.0, 1.0, 0.0));
+    let light_colour = vec3<f32>(1.0, 1.0, 1.0);
     let linear_colour = vec3<f32>(
         srgb_to_linear(in.color.r),
         srgb_to_linear(in.color.g),
@@ -85,7 +86,8 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let fresnel_cos = max(dot(view_dir, in.normal), 0.0);
     let fresnel = R0 + (vec3<f32>(1.0) - R0) * pow(1 - fresnel_cos, 5.0);
 
-    let ambient = 0.1;
-    let shade = vec3<f32>(1.0, 1.0, 1.0) * (specular * fresnel + diffuse + ambient);
-    return vec4<f32>(linear_colour * shade, 1.0);
+    let ambient_term = 0.1 * linear_colour;
+    let diffuse_term = diffuse * light_colour * linear_colour;
+    let specular_term = specular * light_colour * fresnel; //no linear_colour bc it's just light reflected
+    return vec4<f32>(ambient_term + diffuse_term + specular_term, 1.0);
 }
