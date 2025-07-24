@@ -1,7 +1,7 @@
 use crate::camera::{Camera, CameraController};
 use crate::math::{Mat4, Vec3};
 use crate::world::{Cuboid, CuboidRaw, World};
-use crate::{CUBE_INDICES, CUBE_VERTICES, Vertex};
+use crate::{CUBE_INDICES, CUBE_VERTICES, FLOOR_VERTICES, Vertex};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use wgpu::util::DeviceExt;
@@ -55,6 +55,8 @@ struct State {
     depth_texture: wgpu::Texture,
     world: World,
     instance_buffer: wgpu::Buffer,
+    floor_vertex_buffer: wgpu::Buffer,
+    floor_pipeline: wgpu::RenderPipeline,
 }
 
 impl State {
@@ -85,6 +87,12 @@ impl State {
             contents: bytemuck::cast_slice(CUBE_INDICES),
             usage: wgpu::BufferUsages::INDEX,
         });
+        let floor_vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Floor Vertex Buffer"),
+            contents: bytemuck::cast_slice(FLOOR_VERTICES),
+            usage: wgpu::BufferUsages::VERTEX,
+        });
+
         let num_indices = CUBE_INDICES.len() as u32;
 
         let camera = Camera {
@@ -137,26 +145,116 @@ impl State {
                 bind_group_layouts: &[&camera_bind_group_layout],
                 push_constant_ranges: &[],
             });
-        let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some("Render Pipeline"),
-            layout: Some(&render_pipeline_layout),
+
+        let world = World::new();
+        let raw_instances = world
+            .instances
+            .iter()
+            .map(Cuboid::to_raw)
+            .collect::<Vec<_>>();
+        let instance_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Instance Buffer"),
+            contents: bytemuck::cast_slice(&raw_instances),
+            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+        });
+
+        let depth_texture = Self::create_depth_texture(&device, size);
+
+        let render_pipeline = Self::make_pipeline(
+            "Render Pipeline",
+            &device,
+            &shader,
+            &render_pipeline_layout,
+            surface_format,
+            "vs_main",
+            &[Vertex::desc(), CuboidRaw::desc()],
+            true,
+        );
+
+        let floor_pipeline = Self::make_pipeline(
+            "Floor Render Pipeline",
+            &device,
+            &shader,
+            &render_pipeline_layout,
+            surface_format,
+            "vs_static",
+            &[Vertex::desc()],
+            false,
+        );
+        let state = State {
+            window,
+            device,
+            queue,
+            size,
+            surface,
+            surface_format,
+            render_pipeline,
+            vertex_buffer,
+            index_buffer,
+            num_indices,
+            camera,
+            camera_buffer,
+            camera_bind_group,
+            camera_uniform,
+            camera_controller,
+            depth_texture,
+            world,
+            instance_buffer,
+            floor_vertex_buffer,
+            floor_pipeline,
+        };
+        state.configure_surface();
+        state
+    }
+    fn create_depth_texture(
+        device: &wgpu::Device,
+        config: winit::dpi::PhysicalSize<u32>,
+    ) -> wgpu::Texture {
+        device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("Depth Texture"),
+            size: wgpu::Extent3d {
+                width: config.width,
+                height: config.height,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Depth32Float,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+            view_formats: &[],
+        })
+    }
+    fn make_pipeline(
+        label: &str,
+        device: &wgpu::Device,
+        shader: &wgpu::ShaderModule,
+        render_pipeline_layout: &wgpu::PipelineLayout,
+        surface_format: wgpu::TextureFormat,
+        vertex_entry_point: &str,
+        vertex_buffers: &[wgpu::VertexBufferLayout],
+        cull: bool,
+    ) -> wgpu::RenderPipeline {
+        device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some(label),
+            layout: Some(render_pipeline_layout),
             primitive: wgpu::PrimitiveState {
                 topology: wgpu::PrimitiveTopology::TriangleList,
                 front_face: wgpu::FrontFace::Ccw,
-                cull_mode: Some(wgpu::Face::Back),
+                cull_mode: if cull { Some(wgpu::Face::Back) } else { None },
                 polygon_mode: wgpu::PolygonMode::Fill,
                 unclipped_depth: false,
                 conservative: false,
                 strip_index_format: None,
             },
             vertex: wgpu::VertexState {
-                module: &shader,
-                entry_point: Some("vs_main"),
+                module: shader,
+                entry_point: Some(vertex_entry_point),
                 compilation_options: Default::default(),
-                buffers: &[Vertex::desc(), CuboidRaw::desc()],
+                buffers: vertex_buffers,
             },
             fragment: Some(wgpu::FragmentState {
-                module: &shader,
+                module: shader,
                 entry_point: Some("fs_main"),
                 targets: &[Some(wgpu::ColorTargetState {
                     format: surface_format,
@@ -182,61 +280,6 @@ impl State {
             }),
             multiview: None,
             cache: None,
-        });
-
-        let world = World::new();
-        let raw_instances = world
-            .instances
-            .iter()
-            .map(Cuboid::to_raw)
-            .collect::<Vec<_>>();
-        let instance_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Instance Buffer"),
-            contents: bytemuck::cast_slice(&raw_instances),
-            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
-        });
-
-        let depth_texture = Self::create_depth_texture(&device, size);
-        let state = State {
-            window,
-            device,
-            queue,
-            size,
-            surface,
-            surface_format,
-            render_pipeline,
-            vertex_buffer,
-            index_buffer,
-            num_indices,
-            camera,
-            camera_buffer,
-            camera_bind_group,
-            camera_uniform,
-            camera_controller,
-            depth_texture,
-            world,
-            instance_buffer,
-        };
-        state.configure_surface();
-        state
-    }
-    fn create_depth_texture(
-        device: &wgpu::Device,
-        config: winit::dpi::PhysicalSize<u32>,
-    ) -> wgpu::Texture {
-        device.create_texture(&wgpu::TextureDescriptor {
-            label: Some("Depth Texture"),
-            size: wgpu::Extent3d {
-                width: config.width,
-                height: config.height,
-                depth_or_array_layers: 1,
-            },
-            mip_level_count: 1,
-            sample_count: 1,
-            dimension: wgpu::TextureDimension::D2,
-            format: wgpu::TextureFormat::Depth32Float,
-            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
-            view_formats: &[],
         })
     }
     fn get_window(&self) -> &Window {
@@ -332,6 +375,10 @@ impl State {
         renderpass.set_vertex_buffer(1, self.instance_buffer.slice(..));
         renderpass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
         renderpass.draw_indexed(0..self.num_indices, 0, 0..self.world.instances.len() as u32);
+
+        renderpass.set_pipeline(&self.floor_pipeline);
+        renderpass.set_vertex_buffer(0, self.floor_vertex_buffer.slice(..));
+        renderpass.draw(0..6, 0..1);
 
         drop(renderpass);
 

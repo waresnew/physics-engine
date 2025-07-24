@@ -35,6 +35,10 @@ fn vs_main(
         instance.model_matrix_2,
         instance.model_matrix_3
     );
+    return calculate_vertex_output(model, model_matrix);
+}
+
+fn calculate_vertex_output(model: VertexInput, model_matrix: mat4x4<f32>) -> VertexOutput {
     var out: VertexOutput;
     out.color = model.color;
     out.normal = normalize((model_matrix * vec4<f32>(model.normal, 0.0)).xyz);
@@ -44,13 +48,26 @@ fn vs_main(
     return out;
 }
 
+@vertex
+fn vs_static(
+    model: VertexInput
+) -> VertexOutput {
+    let model_matrix = mat4x4<f32>(
+        vec4<f32>(1.0, 0.0, 0.0, 0.0),
+        vec4<f32>(0.0, 1.0, 0.0, 0.0),
+        vec4<f32>(0.0, 0.0, 1.0, 0.0),
+        vec4<f32>(0.0, 0.0, 0.0, 1.0),
+    );
+    return calculate_vertex_output(model, model_matrix);
+}
+
 fn srgb_to_linear(colour: f32) -> f32 {
     return pow((colour + 0.055) / 1.055, 2.4);
 }
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    let light_position = normalize(vec3<f32>(2.0, 4.0, 2.0));
-    let light_dir = normalize(light_position - in.world_position); //point light
+    let light_dir = normalize(vec3<f32>(2.0, 4.0, 2.0));
+    // let light_dir = normalize(light_position - in.world_position); //point light
     let linear_colour = vec3<f32>(
         srgb_to_linear(in.color.r),
         srgb_to_linear(in.color.g),

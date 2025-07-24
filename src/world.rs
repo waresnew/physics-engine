@@ -13,7 +13,7 @@ impl World {
                 (0..INSTANCES_PER_ROW).map(move |x| {
                     let position = Vec3 {
                         x: x as f32 * INSTANCE_SPACING,
-                        y: 0.0,
+                        y: 5.0,
                         z: z as f32 * INSTANCE_SPACING,
                     };
                     let rotation = Quaternion::identity();
