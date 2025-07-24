@@ -161,6 +161,21 @@ impl Mat3 {
     }
 }
 
+impl Mul for Mat3 {
+    type Output = Self;
+    fn mul(self, other: Self) -> Self {
+        let mut ans = Self::new();
+        for col in 0..3 {
+            for row in 0..3 {
+                for k in 0..3 {
+                    ans.array[col * 3 + row] += self.array[k * 3 + row] * other.array[col * 3 + k];
+                }
+            }
+        }
+        ans
+    }
+}
+
 #[derive(Clone, Copy)]
 pub struct Quaternion {
     pub real: f32,
