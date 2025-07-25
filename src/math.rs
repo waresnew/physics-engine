@@ -88,6 +88,10 @@ impl Vec3 {
             z: self.x * other.y - self.y * other.x,
         }
     }
+
+    pub fn rotate(&self, quaternion: Quaternion) -> Self {
+        (quaternion * Quaternion::from_vec3(self) * quaternion.conj()).to_vec3()
+    }
 }
 //1d array so i can enforce column major when sending to shader
 // note that wgpu expects contiguous cells to represent a column, so each "row" i specify is actually a column from top-bottom
@@ -211,6 +215,23 @@ impl Quaternion {
             x: sin * axis.x,
             y: sin * axis.y,
             z: sin * axis.z,
+        }
+    }
+
+    pub fn from_vec3(vec3: &Vec3) -> Self {
+        Self {
+            real: 0.0,
+            x: vec3.x,
+            y: vec3.y,
+            z: vec3.z,
+        }
+    }
+
+    pub fn to_vec3(&self) -> Vec3 {
+        Vec3 {
+            x: self.x,
+            y: self.y,
+            z: self.z,
         }
     }
 
