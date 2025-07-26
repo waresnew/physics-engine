@@ -63,12 +63,23 @@ impl World {
             instance.position += instance.velocity * dt;
             instance.update_derived();
 
+            if instance.aabb.intersects(&self.floor.aabb) {
+                if let Some(mtv) = instance.sat(&self.floor) {
+                    resolve(&mut self.instances[i], &mut self.floor, mtv);
+                }
+            }
+
             //OPTIMIZE:O(n^2)
             for j in (i + 1)..self.instances.len() {
                 let (a, b) = self.instances.split_at_mut(j);
-                resolve(&mut a[i], &mut b[0]);
+                let instance = &mut a[i];
+                let other = &mut b[0];
+                if instance.aabb.intersects(&other.aabb) {
+                    if let Some(mtv) = instance.sat(other) {
+                        resolve(instance, other, mtv);
+                    }
+                }
             }
-            resolve(&mut self.instances[i], &mut self.floor);
 
             // instance.rotation = (instance.rotation
             //     * Quaternion::from_angle(
@@ -81,9 +92,9 @@ impl World {
             //     ))
             // .normalize();
         }
-        fn resolve(instance: &mut Cuboid, other: &mut Cuboid) {
-            if instance.aabb.intersects(&other.aabb) {
-                if let Some(mtv) = instance.sat(other) {
+        fn resolve(instance: &mut Cuboid, other: &mut Cuboid, mtv: Vec3) {
+            {
+                let mut apply_mtv = || {
                     if !instance.frozen && !other.frozen {
                         let im1 = 1.0 / instance.get_mass();
                         let im2 = 1.0 / other.get_mass();
@@ -99,14 +110,52 @@ impl World {
                             instance.position += mtv;
                         }
                     }
-                    instance.collide(other, &mtv.normalize());
-                }
+                };
+                apply_mtv();
+            }
+            let collision_normal = mtv.normalize();
+            {
+                let mut linear_step = || {
+                    let m1 = instance.get_mass();
+                    let m2 = other.get_mass();
+                    let e = RESTITUTION_COEFF;
+                    let v1_ni = instance.velocity.dot(&collision_normal);
+                    let v2_ni = other.velocity.dot(&collision_normal);
+
+                    let v1_nf = collision_normal
+                        * if instance.frozen {
+                            0.0
+                        } else if other.frozen {
+                            -v1_ni * e
+                        } else {
+                            (m1 * v1_ni + m2 * v2_ni - m2 * e * (v1_ni - v2_ni)) / (m1 + m2)
+                        };
+                    let v2_nf = collision_normal
+                        * if other.frozen {
+                            0.0
+                        } else if instance.frozen {
+                            -v2_ni * e
+                        } else {
+                            (m1 * v1_ni + m2 * v2_ni + m1 * e * (v1_ni - v2_ni)) / (m1 + m2)
+                        };
+                    let v1_ti = instance.velocity - v1_ni * collision_normal;
+                    let v2_ti = other.velocity - v2_ni * collision_normal; //TODO: implement friction
+                    let final_v1 = v1_nf + v1_ti;
+                    let final_v2 = v2_nf + v2_ti;
+                    instance.velocity = final_v1;
+                    other.velocity = final_v2;
+                };
+                linear_step();
+            }
+            {
+                let angular_step = || ();
+                angular_step();
             }
         }
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct Cuboid {
     position: Vec3,       //centre
     rotation: Quaternion, //TODO: normalize quaternion after updating it so that i can assume it already is when reading it
@@ -122,7 +171,6 @@ impl Cuboid {
         self.calc_corners();
         self.calc_aabb();
     }
-    pub fn collide(&mut self, other: &mut Cuboid, normal: &Vec3) {}
     pub fn get_mass(&self) -> f32 {
         self.scale.mag() * DENSITY
     }

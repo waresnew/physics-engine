@@ -31,6 +31,17 @@ macro_rules! impl_vec3_op {
             }
         }
 
+        impl $trait<Vec3> for f32 {
+            type Output = Vec3;
+            fn $method(self,other:Vec3)->Vec3 {
+                Vec3{
+                    x:self $op other.x,
+                    y:self $op other.y,
+                    z:self $op other.z
+                }
+            }
+        }
+
         impl $trait_assign for Vec3 {
             fn $method_assign(&mut self, other:Self) {
                 self.x $op_assign other.x;
@@ -180,7 +191,7 @@ impl Mul for Mat3 {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct Quaternion {
     pub real: f32,
     pub x: f32, //i
