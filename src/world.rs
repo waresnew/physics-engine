@@ -1,3 +1,5 @@
+use std::sync::LazyLock;
+
 use crate::math::{EPSILON, Quaternion, Vec3};
 
 pub struct World {
@@ -11,14 +13,18 @@ const GRAV_ACCEL: Vec3 = Vec3 {
     y: -9.81,
     z: 0.0,
 };
-const FLOOR: Cuboid = Cuboid::new(
-    Vec3::new(),
-    Vec3 {
-        x: 200.0,
-        y: 1.0,
-        z: 200.0,
-    },
-);
+static FLOOR: LazyLock<Cuboid> = LazyLock::new(|| {
+    let mut ret = Cuboid::new(
+        Vec3::new(),
+        Vec3 {
+            x: 200.0,
+            y: 1.0,
+            z: 200.0,
+        },
+    );
+    ret.update_derived();
+    ret
+});
 
 impl World {
     pub fn new() -> Self {
@@ -47,6 +53,8 @@ impl World {
         for instance in &mut self.instances {
             instance.velocity += GRAV_ACCEL * dt;
             instance.position += instance.velocity * dt;
+
+            instance.update_derived();
 
             let aabb = instance.get_aabb();
             if aabb.intersects(&FLOOR.get_aabb()) {
@@ -81,9 +89,9 @@ pub struct Cuboid {
     velocity: Vec3,
     angular_velocity: Vec3,
     scale: Vec3,
+    corners: [Vec3; 8],
 }
 impl Cuboid {
-    //OPTIMIZE: maybe have fn update() that caches get_corners
     pub const fn new(position: Vec3, scale: Vec3) -> Self {
         Self {
             position,
@@ -91,9 +99,13 @@ impl Cuboid {
             velocity: Vec3::new(),
             angular_velocity: Vec3::new(),
             scale,
+            corners: [Vec3::new(); 8],
         }
     }
-    pub fn get_corners(&self) -> [Vec3; 8] {
+    pub fn update_derived(&mut self) {
+        self.corners = self.calc_corners();
+    }
+    fn calc_corners(&self) -> [Vec3; 8] {
         let delta: Vec3 = self.scale / 2.0;
         let mut index = 0;
         let mut ans = [Vec3::new(); 8];
@@ -151,14 +163,12 @@ impl Cuboid {
 
         let mut mtv: Vec3 = Vec3::new();
         let mut min_overlap = f32::INFINITY;
-        let self_corners = self.get_corners();
-        let other_corners = other.get_corners();
         for axis in face_axes.iter().chain(edge_axes.iter()) {
             if axis.mag() <= EPSILON {
                 continue;
             }
-            let projected_corners1 = self_corners.map(|x| x.dot(axis));
-            let projected_corners2 = other_corners.map(|x| x.dot(axis));
+            let projected_corners1 = self.corners.map(|x| x.dot(axis));
+            let projected_corners2 = other.corners.map(|x| x.dot(axis));
             let mut min1 = f32::INFINITY;
             let mut min2 = f32::INFINITY;
             let mut max1 = f32::NEG_INFINITY;
@@ -195,7 +205,7 @@ impl Cuboid {
         let mut max_x = f32::NEG_INFINITY;
         let mut max_y = f32::NEG_INFINITY;
         let mut max_z = f32::NEG_INFINITY;
-        for corner in self.get_corners() {
+        for corner in self.corners {
             min_x = min_x.min(corner.x);
             max_x = max_x.max(corner.x);
             min_y = min_y.min(corner.y);

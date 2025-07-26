@@ -147,11 +147,7 @@ impl State {
             });
 
         let world = World::new();
-        let raw_instances = world
-            .instances
-            .iter()
-            .map(Cuboid::to_raw)
-            .collect::<Vec<_>>();
+        let raw_instances = world.instances.map(|x| Cuboid::to_raw(&x));
         let instance_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Instance Buffer"),
             contents: bytemuck::cast_slice(&raw_instances),
@@ -313,12 +309,7 @@ impl State {
             bytemuck::cast_slice(&[self.camera_uniform]),
         );
         self.world.update(dt.as_secs_f32());
-        let raw_instances = self
-            .world
-            .instances
-            .iter()
-            .map(Cuboid::to_raw)
-            .collect::<Vec<_>>();
+        let raw_instances = self.world.instances.map(|x| Cuboid::to_raw(&x));
 
         self.queue.write_buffer(
             &self.instance_buffer,
