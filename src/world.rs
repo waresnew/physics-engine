@@ -7,7 +7,7 @@ pub struct World {
 
 // SI units
 const N: usize = 2;
-const RESTITUTION_COEFF: f32 = 1.0;
+const RESTITUTION_COEFF: f32 = 1.0; //TODO: 0.5
 const DENSITY: f32 = 850.0;
 const INSTANCE_SPACING: f32 = 2.0;
 const GRAV_ACCEL: Vec3 = Vec3 {
@@ -61,6 +61,14 @@ impl World {
             let instance = &mut self.instances[i];
             instance.velocity += GRAV_ACCEL * dt;
             instance.position += instance.velocity * dt;
+            if instance.angular_velocity.mag() > EPSILON * dt {
+                instance.rotation = (instance.rotation
+                    * Quaternion::from_angle(
+                        &instance.angular_velocity.normalize(),
+                        instance.angular_velocity.mag() * dt,
+                    ))
+                .normalize();
+            }
             instance.update_derived();
 
             if instance.aabb.intersects(&self.floor.aabb) {
@@ -80,76 +88,57 @@ impl World {
                     }
                 }
             }
-
-            // instance.rotation = (instance.rotation
-            //     * Quaternion::from_angle(
-            //         &Vec3 {
-            //             x: 1.0,
-            //             y: 1.0,
-            //             z: 1.0,
-            //         },
-            //         0.02,
-            //     ))
-            // .normalize();
         }
         fn resolve(instance: &mut Cuboid, other: &mut Cuboid, mtv: Vec3) {
             {
-                let mut apply_mtv = || {
-                    if !instance.frozen && !other.frozen {
-                        let im1 = 1.0 / instance.get_mass();
-                        let im2 = 1.0 / other.get_mass();
-                        let sum = im1 + im2;
+                //mtv
+                if !instance.frozen && !other.frozen {
+                    let im1 = 1.0 / instance.get_mass();
+                    let im2 = 1.0 / other.get_mass();
+                    let sum = im1 + im2;
 
-                        instance.position += mtv * (im1 / sum); //move less if heavier
-                        other.position -= mtv * (im2 / sum);
+                    instance.position += mtv * (im1 / sum); //move less if heavier
+                    other.position -= mtv * (im2 / sum);
+                } else {
+                    #[allow(clippy::collapsible_else_if)]
+                    if instance.frozen {
+                        other.position -= mtv;
                     } else {
-                        #[allow(clippy::collapsible_else_if)]
-                        if instance.frozen {
-                            other.position -= mtv;
-                        } else {
-                            instance.position += mtv;
-                        }
+                        instance.position += mtv;
                     }
-                };
-                apply_mtv();
+                }
             }
-            let collision_normal = mtv.normalize();
             {
-                let mut linear_step = || {
-                    let m1 = instance.get_mass();
-                    let m2 = other.get_mass();
-                    let e = RESTITUTION_COEFF;
-                    let v1_ni = instance.velocity.dot(&collision_normal);
-                    let v2_ni = other.velocity.dot(&collision_normal);
+                //velocities
+                let collision_normal = mtv.normalize();
+                let m1 = instance.get_mass();
+                let m2 = other.get_mass();
+                let e = RESTITUTION_COEFF;
+                let v1_ni = instance.velocity.dot(&collision_normal);
+                let v2_ni = other.velocity.dot(&collision_normal);
 
-                    let v1_nf = collision_normal
-                        * if instance.frozen {
-                            0.0
-                        } else if other.frozen {
-                            -v1_ni * e
-                        } else {
-                            (m1 * v1_ni + m2 * v2_ni - m2 * e * (v1_ni - v2_ni)) / (m1 + m2)
-                        };
-                    let v2_nf = collision_normal
-                        * if other.frozen {
-                            0.0
-                        } else if instance.frozen {
-                            -v2_ni * e
-                        } else {
-                            (m1 * v1_ni + m2 * v2_ni + m1 * e * (v1_ni - v2_ni)) / (m1 + m2)
-                        };
-                    let v1_ti = instance.velocity - v1_ni * collision_normal;
-                    let v2_ti = other.velocity - v2_ni * collision_normal; //TODO: implement friction
-                    let final_v1 = v1_nf + v1_ti;
-                    let final_v2 = v2_nf + v2_ti;
-                    instance.velocity = final_v1;
-                    other.velocity = final_v2;
-                };
-                linear_step();
-            }
-            {
-                let angular_step = || ();
-                angular_step();
+                let v1_nf = collision_normal
+                    * if instance.frozen {
+                        0.0
+                    } else if other.frozen {
+                        -v1_ni * e
+                    } else {
+                        (m1 * v1_ni + m2 * v2_ni - m2 * e * (v1_ni - v2_ni)) / (m1 + m2)
+                    };
+                let v2_nf = collision_normal
+                    * if other.frozen {
+                        0.0
+                    } else if instance.frozen {
+                        -v2_ni * e
+                    } else {
+                        (m1 * v1_ni + m2 * v2_ni + m1 * e * (v1_ni - v2_ni)) / (m1 + m2)
+                    };
+                let v1_ti = instance.velocity - v1_ni * collision_normal;
+                let v2_ti = other.velocity - v2_ni * collision_normal; //TODO: implement friction
+                let final_v1 = v1_nf + v1_ti;
+                let final_v2 = v2_nf + v2_ti;
+                instance.velocity = final_v1;
+                other.velocity = final_v2;
             }
         }
     }
@@ -157,8 +146,8 @@ impl World {
 
 #[derive(Debug, Copy, Clone)]
 pub struct Cuboid {
-    position: Vec3,       //centre
-    rotation: Quaternion, //TODO: normalize quaternion after updating it so that i can assume it already is when reading it
+    position: Vec3, //centre
+    rotation: Quaternion,
     velocity: Vec3,
     angular_velocity: Vec3,
     scale: Vec3,
