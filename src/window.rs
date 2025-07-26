@@ -25,7 +25,7 @@ struct CameraUniform {
 impl CameraUniform {
     pub fn new() -> Self {
         Self {
-            view_proj: Mat4::identity().array,
+            view_proj: Mat4::default().array,
             view_pos: [0.0, 0.0, 0.0],
             _padding1: 0.0,
         }
@@ -106,7 +106,7 @@ impl State {
             aspect_ratio: size.width as f32 / size.height as f32,
         };
 
-        let camera_controller = CameraController::new();
+        let camera_controller = CameraController::default();
 
         let mut camera_uniform = CameraUniform::new();
         camera_uniform.update_camera_uniform(&camera);

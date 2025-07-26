@@ -1,6 +1,6 @@
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 pub const EPSILON: f32 = 1e-5;
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Default)]
 pub struct Vec3 {
     pub x: f32,
     pub y: f32,
@@ -66,13 +66,6 @@ impl Neg for Vec3 {
 }
 
 impl Vec3 {
-    pub const fn new() -> Self {
-        Self {
-            x: 0.0,
-            y: 0.0,
-            z: 0.0,
-        }
-    }
     pub fn mag(&self) -> f32 {
         (self.x * self.x + self.y * self.y + self.z * self.z).sqrt()
     }
@@ -102,7 +95,7 @@ pub struct Mat4 {
 
 impl Mat4 {
     #[rustfmt::skip]
-    pub fn new() -> Self {
+    pub fn zero() -> Self {
         Self {
             array: [
                 0.0, 0.0, 0.0, 0.0,
@@ -112,8 +105,11 @@ impl Mat4 {
             ],
         }
     }
+}
+
+impl Default for Mat4 {
     #[rustfmt::skip]
-    pub fn identity() -> Self {
+    fn default()->Self {
         Self {
             array: [
                 1.0, 0.0, 0.0, 0.0,
@@ -128,7 +124,7 @@ impl Mat4 {
 impl Mul for Mat4 {
     type Output = Self;
     fn mul(self, other: Self) -> Self {
-        let mut ans = Mat4::new();
+        let mut ans = Mat4::zero();
         for col in 0..4 {
             for row in 0..4 {
                 for k in 0..4 {
@@ -145,7 +141,7 @@ pub struct Mat3 {
 
 impl Mat3 {
     #[rustfmt::skip]
-    pub fn new() -> Self {
+    pub fn zero() -> Self {
         Self {
             array: [
                 0.0, 0.0, 0.0,
@@ -154,13 +150,16 @@ impl Mat3 {
             ],
         }
     }
+}
+
+impl Default for Mat3 {
     #[rustfmt::skip]
-    pub fn identity()->Self {
+    fn default() -> Self {
         Self {
             array: [
                 1.0, 0.0, 0.0,
                 0.0, 1.0, 0.0,
-                0.0, 0.0, 1.0,
+                0.0, 0.0, 1.0
             ],
         }
     }
@@ -169,7 +168,7 @@ impl Mat3 {
 impl Mul for Mat3 {
     type Output = Self;
     fn mul(self, other: Self) -> Self {
-        let mut ans = Self::new();
+        let mut ans = Self::zero();
         for col in 0..3 {
             for row in 0..3 {
                 for k in 0..3 {
@@ -190,18 +189,9 @@ pub struct Quaternion {
 }
 
 impl Quaternion {
-    pub fn new() -> Self {
+    pub fn zero() -> Self {
         Self {
             real: 0.0,
-            x: 0.0,
-            y: 0.0,
-            z: 0.0,
-        }
-    }
-
-    pub const fn identity() -> Self {
-        Self {
-            real: 1.0,
             x: 0.0,
             y: 0.0,
             z: 0.0,
@@ -272,7 +262,16 @@ impl Quaternion {
         }
     }
 }
-
+impl Default for Quaternion {
+    fn default() -> Self {
+        Self {
+            real: 1.0,
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        }
+    }
+}
 impl Mul for Quaternion {
     type Output = Self;
     fn mul(self, other: Self) -> Self {

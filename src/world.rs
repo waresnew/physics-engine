@@ -14,14 +14,14 @@ const GRAV_ACCEL: Vec3 = Vec3 {
     z: 0.0,
 };
 static FLOOR: LazyLock<Cuboid> = LazyLock::new(|| {
-    let mut ret = Cuboid::new(
-        Vec3::new(),
-        Vec3 {
+    let mut ret = Cuboid {
+        scale: Vec3 {
             x: 200.0,
             y: 1.0,
             z: 200.0,
         },
-    );
+        ..Default::default()
+    };
     ret.update_derived();
     ret
 });
@@ -29,7 +29,7 @@ static FLOOR: LazyLock<Cuboid> = LazyLock::new(|| {
 impl World {
     pub fn new() -> Self {
         let mut instances: [Cuboid; INSTANCES_PER_ROW * INSTANCES_PER_ROW] =
-            [Cuboid::new(Vec3::new(), Vec3::new()); INSTANCES_PER_ROW * INSTANCES_PER_ROW];
+            [Cuboid::default(); INSTANCES_PER_ROW * INSTANCES_PER_ROW];
         for i in 0..INSTANCES_PER_ROW {
             for j in 0..INSTANCES_PER_ROW {
                 let scale = Vec3 {
@@ -42,7 +42,11 @@ impl World {
                     y: 10.0,
                     z: j as f32 * INSTANCE_SPACING * scale.z,
                 };
-                instances[i * INSTANCES_PER_ROW + j] = Cuboid::new(position, scale);
+                instances[i * INSTANCES_PER_ROW + j] = Cuboid {
+                    position,
+                    scale,
+                    ..Default::default()
+                };
             }
         }
 
@@ -82,7 +86,7 @@ impl World {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Default)]
 pub struct Cuboid {
     position: Vec3,       //centre
     rotation: Quaternion, //TODO: normalize quaternion after updating it so that i can assume it already is when reading it
@@ -90,25 +94,16 @@ pub struct Cuboid {
     angular_velocity: Vec3,
     scale: Vec3,
     corners: [Vec3; 8],
+    mass: f32,
 }
 impl Cuboid {
-    pub const fn new(position: Vec3, scale: Vec3) -> Self {
-        Self {
-            position,
-            rotation: Quaternion::identity(),
-            velocity: Vec3::new(),
-            angular_velocity: Vec3::new(),
-            scale,
-            corners: [Vec3::new(); 8],
-        }
-    }
     pub fn update_derived(&mut self) {
         self.corners = self.calc_corners();
     }
     fn calc_corners(&self) -> [Vec3; 8] {
         let delta: Vec3 = self.scale / 2.0;
         let mut index = 0;
-        let mut ans = [Vec3::new(); 8];
+        let mut ans = [Vec3::default(); 8];
         for i in [-1.0, 1.0] {
             for j in [-1.0, 1.0] {
                 for k in [-1.0, 1.0] {
@@ -150,7 +145,7 @@ impl Cuboid {
                 global_axes[i / 2].rotate(other.rotation).normalize()
             }
         });
-        let mut edge_axes = [Vec3::new(); 9];
+        let mut edge_axes = [Vec3::default(); 9];
         for i in 0..3 {
             for j in 0..3 {
                 let mut cross = face_axes[i].cross(&face_axes[j + 3]);
@@ -161,7 +156,7 @@ impl Cuboid {
             }
         }
 
-        let mut mtv: Vec3 = Vec3::new();
+        let mut mtv: Vec3 = Vec3::default();
         let mut min_overlap = f32::INFINITY;
         for axis in face_axes.iter().chain(edge_axes.iter()) {
             if axis.mag() <= EPSILON {

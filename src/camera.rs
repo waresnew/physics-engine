@@ -57,6 +57,7 @@ impl Camera {
     }
 }
 
+#[derive(Default)]
 pub struct CameraController {
     left: f32,
     right: f32,
@@ -69,18 +70,6 @@ pub struct CameraController {
 }
 
 impl CameraController {
-    pub fn new() -> Self {
-        Self {
-            left: 0.0,
-            right: 0.0,
-            forward: 0.0,
-            backward: 0.0,
-            up: 0.0,
-            down: 0.0,
-            rotate_horizontal: 0.0,
-            rotate_vertical: 0.0,
-        }
-    }
     pub fn on_key(&mut self, key: KeyCode, pressed: bool) {
         let amount = if pressed { 1.0 } else { 0.0 };
         match key {
