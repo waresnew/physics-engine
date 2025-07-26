@@ -1,5 +1,3 @@
-#![allow(clippy::new_without_default)]
-
 pub mod camera;
 pub mod math;
 pub mod window;

@@ -1,37 +1,27 @@
-use std::sync::LazyLock;
-
 use crate::math::{EPSILON, Quaternion, Vec3};
 
 pub struct World {
-    pub instances: [Cuboid; INSTANCES_PER_ROW * INSTANCES_PER_ROW],
+    pub instances: [Cuboid; N * N],
+    floor: Cuboid,
 }
 
-const INSTANCES_PER_ROW: usize = 2;
+// SI units
+const N: usize = 2;
+const RESTITUTION_COEFF: f32 = 1.0;
+const DENSITY: f32 = 850.0;
 const INSTANCE_SPACING: f32 = 2.0;
 const GRAV_ACCEL: Vec3 = Vec3 {
     x: 0.0,
     y: -9.81,
     z: 0.0,
 };
-static FLOOR: LazyLock<Cuboid> = LazyLock::new(|| {
-    let mut ret = Cuboid {
-        scale: Vec3 {
-            x: 200.0,
-            y: 1.0,
-            z: 200.0,
-        },
-        ..Default::default()
-    };
-    ret.update_derived();
-    ret
-});
 
 impl World {
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
-        let mut instances: [Cuboid; INSTANCES_PER_ROW * INSTANCES_PER_ROW] =
-            [Cuboid::default(); INSTANCES_PER_ROW * INSTANCES_PER_ROW];
-        for i in 0..INSTANCES_PER_ROW {
-            for j in 0..INSTANCES_PER_ROW {
+        let mut instances: [Cuboid; N * N] = [Cuboid::default(); N * N];
+        for i in 0..N {
+            for j in 0..N {
                 let scale = Vec3 {
                     x: 1.0,
                     y: 1.0,
@@ -42,35 +32,43 @@ impl World {
                     y: 10.0,
                     z: j as f32 * INSTANCE_SPACING * scale.z,
                 };
-                instances[i * INSTANCES_PER_ROW + j] = Cuboid {
+                instances[i * N + j] = Cuboid {
                     position,
                     scale,
                     ..Default::default()
                 };
             }
         }
+        let mut floor = Cuboid {
+            scale: Vec3 {
+                x: 200.0,
+                y: 1.0,
+                z: 200.0,
+            },
+            frozen: true,
+            ..Default::default()
+        };
+        floor.update_derived();
 
-        Self { instances }
+        Self { instances, floor }
     }
 
     pub fn update(&mut self, dt: f32) {
-        for instance in &mut self.instances {
+        for i in 0..self.instances.len() {
+            if self.instances[i].frozen {
+                continue;
+            }
+            let instance = &mut self.instances[i];
             instance.velocity += GRAV_ACCEL * dt;
             instance.position += instance.velocity * dt;
-
             instance.update_derived();
 
-            let aabb = instance.get_aabb();
-            if aabb.intersects(&FLOOR.get_aabb()) {
-                if let Some(mtv) = instance.sat(&FLOOR) {
-                    instance.position += mtv;
-                    instance.velocity = Vec3 {
-                        x: 0.0,
-                        y: -instance.velocity.y * 0.75,
-                        z: 0.0,
-                    };
-                }
+            //OPTIMIZE:O(n^2)
+            for j in (i + 1)..self.instances.len() {
+                let (a, b) = self.instances.split_at_mut(j);
+                resolve(&mut a[i], &mut b[0]);
             }
+            resolve(&mut self.instances[i], &mut self.floor);
 
             // instance.rotation = (instance.rotation
             //     * Quaternion::from_angle(
@@ -83,10 +81,32 @@ impl World {
             //     ))
             // .normalize();
         }
+        fn resolve(instance: &mut Cuboid, other: &mut Cuboid) {
+            if instance.aabb.intersects(&other.aabb) {
+                if let Some(mtv) = instance.sat(other) {
+                    if !instance.frozen && !other.frozen {
+                        let im1 = 1.0 / instance.get_mass();
+                        let im2 = 1.0 / other.get_mass();
+                        let sum = im1 + im2;
+
+                        instance.position += mtv * (im1 / sum); //move less if heavier
+                        other.position -= mtv * (im2 / sum);
+                    } else {
+                        #[allow(clippy::collapsible_else_if)]
+                        if instance.frozen {
+                            other.position -= mtv;
+                        } else {
+                            instance.position += mtv;
+                        }
+                    }
+                    instance.collide(other, &mtv.normalize());
+                }
+            }
+        }
     }
 }
 
-#[derive(Copy, Clone, Default)]
+#[derive(Copy, Clone)]
 pub struct Cuboid {
     position: Vec3,       //centre
     rotation: Quaternion, //TODO: normalize quaternion after updating it so that i can assume it already is when reading it
@@ -94,13 +114,19 @@ pub struct Cuboid {
     angular_velocity: Vec3,
     scale: Vec3,
     corners: [Vec3; 8],
-    mass: f32,
+    aabb: AABB,
+    frozen: bool,
 }
 impl Cuboid {
     pub fn update_derived(&mut self) {
-        self.corners = self.calc_corners();
+        self.calc_corners();
+        self.calc_aabb();
     }
-    fn calc_corners(&self) -> [Vec3; 8] {
+    pub fn collide(&mut self, other: &mut Cuboid, normal: &Vec3) {}
+    pub fn get_mass(&self) -> f32 {
+        self.scale.mag() * DENSITY
+    }
+    fn calc_corners(&mut self) {
         let delta: Vec3 = self.scale / 2.0;
         let mut index = 0;
         let mut ans = [Vec3::default(); 8];
@@ -118,7 +144,7 @@ impl Cuboid {
                 }
             }
         }
-        ans
+        self.corners = ans;
     }
     pub fn sat(&self, other: &Cuboid) -> Option<Vec3> {
         let global_axes = [
@@ -188,12 +214,12 @@ impl Cuboid {
 
         let mut scaled_mtv = mtv * min_overlap;
         if (self.position - other.position).dot(&scaled_mtv) < 0.0 {
-            scaled_mtv = -scaled_mtv;
+            scaled_mtv = -scaled_mtv; //other->self
         }
 
         Some(scaled_mtv)
     }
-    pub fn get_aabb(&self) -> AABB {
+    pub fn calc_aabb(&mut self) {
         let mut min_x = f32::INFINITY;
         let mut min_y = f32::INFINITY;
         let mut min_z = f32::INFINITY;
@@ -208,7 +234,7 @@ impl Cuboid {
             min_z = min_z.min(corner.z);
             max_z = max_z.max(corner.z);
         }
-        AABB {
+        self.aabb = AABB {
             min: Vec3 {
                 x: min_x,
                 y: min_y,
@@ -234,8 +260,25 @@ impl Cuboid {
         }
     }
 }
-
-#[derive(Debug)]
+impl Default for Cuboid {
+    fn default() -> Self {
+        Self {
+            scale: Vec3 {
+                x: 1.0,
+                y: 1.0,
+                z: 1.0,
+            },
+            position: Vec3::default(),
+            rotation: Quaternion::default(),
+            velocity: Vec3::default(),
+            angular_velocity: Vec3::default(),
+            corners: [Vec3::default(); 8],
+            aabb: AABB::default(),
+            frozen: false,
+        }
+    }
+}
+#[derive(Debug, Default, Copy, Clone)]
 pub struct AABB {
     min: Vec3,
     max: Vec3,
