@@ -1,61 +1,66 @@
-use crate::math::{Mat3, Quaternion, Vec3};
+use crate::math::{EPSILON, Quaternion, Vec3};
 
 pub struct World {
-    pub instances: Vec<Cuboid>,
+    pub instances: [Cuboid; INSTANCES_PER_ROW * INSTANCES_PER_ROW],
 }
 
-const INSTANCES_PER_ROW: u32 = 2;
+const INSTANCES_PER_ROW: usize = 2;
 const INSTANCE_SPACING: f32 = 2.0;
 const GRAV_ACCEL: Vec3 = Vec3 {
     x: 0.0,
     y: -9.81,
     z: 0.0,
 };
-const FLOOR_AABB: AABB = AABB {
-    min: Vec3 {
-        x: f32::NEG_INFINITY,
-        y: 0.0,
-        z: f32::NEG_INFINITY,
+const FLOOR: Cuboid = Cuboid::new(
+    Vec3::new(),
+    Vec3 {
+        x: 200.0,
+        y: 1.0,
+        z: 200.0,
     },
-    max: Vec3 {
-        x: f32::INFINITY,
-        y: 0.0,
-        z: f32::INFINITY,
-    },
-};
+);
 
 impl World {
     pub fn new() -> Self {
-        let instances = (0..INSTANCES_PER_ROW)
-            .flat_map(|z| {
-                (0..INSTANCES_PER_ROW).map(move |x| {
-                    let scale = Vec3 {
-                        x: 1.0,
-                        y: 1.0,
-                        z: 1.0,
-                    };
-                    let position = Vec3 {
-                        x: x as f32 * INSTANCE_SPACING * scale.x,
-                        y: 5.0,
-                        z: z as f32 * INSTANCE_SPACING * scale.z,
-                    };
-                    Cuboid::new(position, scale)
-                })
-            })
-            .collect();
+        let mut instances: [Cuboid; INSTANCES_PER_ROW * INSTANCES_PER_ROW] =
+            [Cuboid::new(Vec3::new(), Vec3::new()); INSTANCES_PER_ROW * INSTANCES_PER_ROW];
+        for i in 0..INSTANCES_PER_ROW {
+            for j in 0..INSTANCES_PER_ROW {
+                let scale = Vec3 {
+                    x: 1.0,
+                    y: 1.0,
+                    z: 1.0,
+                };
+                let position = Vec3 {
+                    x: i as f32 * INSTANCE_SPACING * scale.x,
+                    y: 10.0,
+                    z: j as f32 * INSTANCE_SPACING * scale.z,
+                };
+                instances[i * INSTANCES_PER_ROW + j] = Cuboid::new(position, scale);
+            }
+        }
 
         Self { instances }
     }
 
     pub fn update(&mut self, dt: f32) {
         for instance in &mut self.instances {
+            instance.velocity += GRAV_ACCEL * dt;
+            instance.position += instance.velocity * dt;
+
             let aabb = instance.get_aabb();
-            if !aabb.intersects(&FLOOR_AABB) {
-                instance.velocity += GRAV_ACCEL * dt;
-                instance.position += instance.velocity * dt;
+            if aabb.intersects(&FLOOR.get_aabb()) {
+                if let Some(mtv) = instance.sat(&FLOOR) {
+                    instance.position += mtv;
+                    instance.velocity = Vec3 {
+                        x: 0.0,
+                        y: -instance.velocity.y * 0.75,
+                        z: 0.0,
+                    };
+                }
             }
 
-            // instance.rotation = instance.rotation
+            // instance.rotation = (instance.rotation
             //     * Quaternion::from_angle(
             //         &Vec3 {
             //             x: 1.0,
@@ -63,11 +68,13 @@ impl World {
             //             z: 1.0,
             //         },
             //         0.02,
-            //     );
+            //     ))
+            // .normalize();
         }
     }
 }
 
+#[derive(Copy, Clone)]
 pub struct Cuboid {
     position: Vec3,       //centre
     rotation: Quaternion, //TODO: normalize quaternion after updating it so that i can assume it already is when reading it
@@ -76,7 +83,8 @@ pub struct Cuboid {
     scale: Vec3,
 }
 impl Cuboid {
-    pub fn new(position: Vec3, scale: Vec3) -> Self {
+    //OPTIMIZE: maybe have fn update() that caches get_corners
+    pub const fn new(position: Vec3, scale: Vec3) -> Self {
         Self {
             position,
             rotation: Quaternion::identity(),
@@ -85,33 +93,115 @@ impl Cuboid {
             scale,
         }
     }
-    pub fn get_aabb(&self) -> AABB {
+    pub fn get_corners(&self) -> [Vec3; 8] {
         let delta: Vec3 = self.scale / 2.0;
-        let mut min_x = f32::INFINITY;
-        let mut min_y = f32::INFINITY;
-        let mut min_z = f32::INFINITY;
-        let mut max_x = f32::NEG_INFINITY;
-        let mut max_y = f32::NEG_INFINITY;
-        let mut max_z = f32::NEG_INFINITY;
+        let mut index = 0;
+        let mut ans = [Vec3::new(); 8];
         for i in [-1.0, 1.0] {
             for j in [-1.0, 1.0] {
                 for k in [-1.0, 1.0] {
-                    let corner = self.position
+                    ans[index] = self.position
                         + (Vec3 {
                             x: i * delta.x,
                             y: j * delta.y,
                             z: k * delta.z,
                         }
                         .rotate(self.rotation));
-
-                    min_x = min_x.min(corner.x);
-                    max_x = max_x.max(corner.x);
-                    min_y = min_y.min(corner.y);
-                    max_y = max_y.max(corner.y);
-                    min_z = min_z.min(corner.z);
-                    max_z = max_z.max(corner.z);
+                    index += 1;
                 }
             }
+        }
+        ans
+    }
+    pub fn sat(&self, other: &Cuboid) -> Option<Vec3> {
+        let global_axes = [
+            Vec3 {
+                x: 1.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            Vec3 {
+                x: 0.0,
+                y: 1.0,
+                z: 0.0,
+            },
+            Vec3 {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
+        ];
+        let face_axes: [Vec3; 6] = std::array::from_fn(|i| {
+            if i % 2 == 0 {
+                global_axes[i / 2].rotate(self.rotation).normalize()
+            } else {
+                global_axes[i / 2].rotate(other.rotation).normalize()
+            }
+        });
+        let mut edge_axes = [Vec3::new(); 9];
+        for i in 0..3 {
+            for j in 0..3 {
+                let mut cross = face_axes[i].cross(&face_axes[j + 3]);
+                if cross.mag() > EPSILON {
+                    cross = cross.normalize();
+                }
+                edge_axes[i * 3 + j] = cross;
+            }
+        }
+
+        let mut mtv: Vec3 = Vec3::new();
+        let mut min_overlap = f32::INFINITY;
+        let self_corners = self.get_corners();
+        let other_corners = other.get_corners();
+        for axis in face_axes.iter().chain(edge_axes.iter()) {
+            if axis.mag() <= EPSILON {
+                continue;
+            }
+            let projected_corners1 = self_corners.map(|x| x.dot(axis));
+            let projected_corners2 = other_corners.map(|x| x.dot(axis));
+            let mut min1 = f32::INFINITY;
+            let mut min2 = f32::INFINITY;
+            let mut max1 = f32::NEG_INFINITY;
+            let mut max2 = f32::NEG_INFINITY;
+            for x in projected_corners1 {
+                min1 = min1.min(x);
+                max1 = max1.max(x);
+            }
+            for x in projected_corners2 {
+                min2 = min2.min(x);
+                max2 = max2.max(x);
+            }
+            if max1 < min2 || max2 < min1 {
+                return None;
+            }
+            let overlap = max1.min(max2) - min1.max(min2);
+            if overlap < min_overlap {
+                min_overlap = overlap;
+                mtv = *axis;
+            }
+        }
+
+        let mut scaled_mtv = mtv * min_overlap;
+        if (self.position - other.position).dot(&scaled_mtv) < 0.0 {
+            scaled_mtv = -scaled_mtv;
+        }
+
+        Some(scaled_mtv)
+    }
+    pub fn get_aabb(&self) -> AABB {
+        let mut min_x = f32::INFINITY;
+        let mut min_y = f32::INFINITY;
+        let mut min_z = f32::INFINITY;
+        let mut max_x = f32::NEG_INFINITY;
+        let mut max_y = f32::NEG_INFINITY;
+        let mut max_z = f32::NEG_INFINITY;
+        for corner in self.get_corners() {
+            min_x = min_x.min(corner.x);
+            max_x = max_x.max(corner.x);
+            min_y = min_y.min(corner.y);
+            max_y = max_y.max(corner.y);
+            min_z = min_z.min(corner.z);
+            max_z = max_z.max(corner.z);
         }
         AABB {
             min: Vec3 {
@@ -140,6 +230,7 @@ impl Cuboid {
     }
 }
 
+#[derive(Debug)]
 pub struct AABB {
     min: Vec3,
     max: Vec3,

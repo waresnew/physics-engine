@@ -1,4 +1,5 @@
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
+pub const EPSILON: f32 = 1e-5;
 #[derive(Copy, Clone, Debug)]
 pub struct Vec3 {
     pub x: f32,
@@ -65,7 +66,7 @@ impl Neg for Vec3 {
 }
 
 impl Vec3 {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             x: 0.0,
             y: 0.0,
@@ -198,7 +199,7 @@ impl Quaternion {
         }
     }
 
-    pub fn identity() -> Self {
+    pub const fn identity() -> Self {
         Self {
             real: 1.0,
             x: 0.0,
