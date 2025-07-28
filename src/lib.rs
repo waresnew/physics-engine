@@ -1,5 +1,6 @@
 pub mod camera;
 pub mod math;
+pub mod physics;
 pub mod window;
 pub mod world;
 
@@ -180,33 +181,33 @@ pub const FLOOR_VERTICES: &[Vertex] = &[
     //triangle 1
     Vertex {
         position: [100.0, 0.0, 100.0],
-        colour: [0.7412, 0.7412, 0.7412],
+        colour: [0.38, 0.38, 0.38],
         normal: [0.0, 1.0, 0.0],
     },
     Vertex {
         position: [100.0, 0.0, -100.0],
-        colour: [0.7412, 0.7412, 0.7412],
+        colour: [0.38, 0.38, 0.38],
         normal: [0.0, 1.0, 0.0],
     },
     Vertex {
         position: [-100.0, 0.0, -100.0],
-        colour: [0.7412, 0.7412, 0.7412],
+        colour: [0.38, 0.38, 0.38],
         normal: [0.0, 1.0, 0.0],
     },
     //triangle 2
     Vertex {
         position: [-100.0, 0.0, -100.0],
-        colour: [0.7412, 0.7412, 0.7412],
+        colour: [0.38, 0.38, 0.38],
         normal: [0.0, 1.0, 0.0],
     },
     Vertex {
         position: [-100.0, 0.0, 100.0],
-        colour: [0.7412, 0.7412, 0.7412],
+        colour: [0.38, 0.38, 0.38],
         normal: [0.0, 1.0, 0.0],
     },
     Vertex {
         position: [100.0, 0.0, 100.0],
-        colour: [0.7412, 0.7412, 0.7412],
+        colour: [0.38, 0.38, 0.38],
         normal: [0.0, 1.0, 0.0],
     },
 ];
