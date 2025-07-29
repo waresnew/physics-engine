@@ -186,11 +186,14 @@ impl Cuboid {
             return Mat3::zero();
         }
         let Vec3{x,y,z}=self.scale;
+        let ixx = (1.0/12.0) * m * (y*y + z*z);
+        let iyy = (1.0/12.0) * m * (x*x + z*z);
+        let izz = (1.0/12.0) * m * (x*x + y*y);
         Mat3 {
             array: [
-                1.0/12.0*m*(y*y+z*z),0.0,0.0,
-                0.0,1.0/12.0*m*(x*x+z*z),0.0,
-                0.0,0.0,1.0/12.0*m*(x*x+y*y)
+                1.0/ixx,0.0,0.0,
+                0.0,1.0/iyy,0.0,
+                0.0,0.0,1.0/izz
             ]
         }
     }

@@ -255,7 +255,7 @@ pub fn apply_impulse(info: &CollisionInfo, instances: &mut [Cuboid; N + 1], dt: 
             let v_rel = (v1 + w1.cross(&r1)) - (v2 + w2.cross(&r2));
             let v_n = v_rel.dot(&collision_normal);
             //baumgarte stabilization
-            let bias = -(BAUMGARTE_BIAS / dt) * depth.max(0.0);
+            let bias = (BAUMGARTE_BIAS / dt) * depth.max(0.0);
 
             let rot_inertia1 =
                 (&inv_moi1 * &(r1.cross(&collision_normal)).cross(&r1)).dot(&collision_normal);
