@@ -1,6 +1,6 @@
 use crate::camera::{Camera, CameraController};
 use crate::math::{Mat4, Vec3};
-use crate::world::{Cuboid, CuboidRaw, World};
+use crate::world::{Cuboid, CuboidRaw, N, World};
 use crate::{CUBE_INDICES, CUBE_VERTICES, FLOOR_VERTICES, Vertex};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -147,7 +147,10 @@ impl State {
             });
 
         let world = World::new();
-        let raw_instances = world.instances.map(|x| Cuboid::to_raw(&x));
+        let mut raw_instances = [CuboidRaw::default(); N];
+        for (i, instance) in world.instances[..N].iter().enumerate() {
+            raw_instances[i] = Cuboid::to_raw(instance);
+        }
         let instance_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Instance Buffer"),
             contents: bytemuck::cast_slice(&raw_instances),
@@ -309,7 +312,10 @@ impl State {
             bytemuck::cast_slice(&[self.camera_uniform]),
         );
         self.world.update(dt.as_secs_f32());
-        let raw_instances = self.world.instances.map(|x| Cuboid::to_raw(&x));
+        let mut raw_instances = [CuboidRaw::default(); N];
+        for (i, instance) in self.world.instances[..N].iter().enumerate() {
+            raw_instances[i] = Cuboid::to_raw(instance);
+        }
 
         self.queue.write_buffer(
             &self.instance_buffer,
@@ -362,7 +368,7 @@ impl State {
         renderpass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
         renderpass.set_vertex_buffer(1, self.instance_buffer.slice(..));
         renderpass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
-        renderpass.draw_indexed(0..self.num_indices, 0, 0..self.world.instances.len() as u32);
+        renderpass.draw_indexed(0..self.num_indices, 0, 0..N as u32);
 
         renderpass.set_pipeline(&self.floor_pipeline);
         renderpass.set_vertex_buffer(0, self.floor_vertex_buffer.slice(..));

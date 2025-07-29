@@ -8,7 +8,7 @@ impl EpsilonEquals for f32 {
         (self - other).abs() <= EPSILON
     }
 }
-#[derive(Copy, Clone, Debug, Default)]
+#[derive(PartialEq, Copy, Clone, Debug, Default)]
 pub struct Vec3 {
     pub x: f32,
     pub y: f32,
@@ -63,6 +63,46 @@ macro_rules! impl_vec3_op {
                 self.x $op_assign other;
                 self.y $op_assign other;
                 self.z $op_assign other;
+            }
+        }
+        impl $trait for &Vec3 {
+            type Output = Vec3;
+            fn $method(self, other: &Vec3) -> Vec3 {
+                Vec3 {
+                    x: self.x $op other.x,
+                    y: self.y $op other.y,
+                    z: self.z $op other.z,
+                }
+            }
+        }
+
+        impl $trait<f32> for &Vec3 {
+            type Output = Vec3;
+            fn $method(self, other: f32) -> Vec3 {
+                Vec3 {
+                    x: self.x $op other,
+                    y: self.y $op other,
+                    z: self.z $op other,
+                }
+            }
+        }
+
+        impl $trait<&Vec3> for f32 {
+            type Output = Vec3;
+            fn $method(self, other: &Vec3) -> Vec3 {
+                Vec3 {
+                    x: self $op other.x,
+                    y: self $op other.y,
+                    z: self $op other.z,
+                }
+            }
+        }
+
+        impl $trait_assign<&Vec3> for Vec3 {
+            fn $method_assign(&mut self, other: &Vec3) {
+                self.x $op_assign other.x;
+                self.y $op_assign other.y;
+                self.z $op_assign other.z;
             }
         }
     }
@@ -198,6 +238,17 @@ impl Mul for Mat3 {
         ans
     }
 }
+impl Mul<&Vec3> for &Mat3 {
+    type Output = Vec3;
+
+    fn mul(self, v: &Vec3) -> Vec3 {
+        Vec3 {
+            x: self.array[0] * v.x + self.array[3] * v.y + self.array[6] * v.z,
+            y: self.array[1] * v.x + self.array[4] * v.y + self.array[7] * v.z,
+            z: self.array[2] * v.x + self.array[5] * v.y + self.array[8] * v.z,
+        }
+    }
+}
 
 #[derive(Debug, Clone, Copy)]
 pub struct Quaternion {
@@ -316,12 +367,12 @@ pub struct Plane {
     pub normal: Vec3,
 }
 impl Plane {
-    pub fn distance_to_point(&self, point: Vec3) -> f32 {
-        ((point - self.point).dot(&self.normal)) / self.normal.mag()
+    pub fn distance_to_point(&self, point: &Vec3) -> f32 {
+        ((point - &self.point).dot(&self.normal)) / self.normal.mag()
     }
-    pub fn intersect_with_line_segment(&self, point1: Vec3, point2: Vec3) -> Vec3 {
+    pub fn intersect_with_line_segment(&self, point1: &Vec3, point2: &Vec3) -> Vec3 {
         let dir = point2 - point1;
-        let numerator = self.normal.dot(&(self.point - point1));
+        let numerator = self.normal.dot(&(&self.point - point1));
         let denominator = self.normal.dot(&dir);
         if denominator.abs() < EPSILON {
             panic!(
@@ -331,7 +382,7 @@ impl Plane {
         } else {
             let t = numerator / denominator;
             if t >= 0.0 && t <= 1.0 {
-                point1 + t * dir
+                point1 + &(t * dir)
             } else {
                 panic!(
                     "line segment does not intersect with plane, {:?}, {:?}, {:?}",
