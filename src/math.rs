@@ -1,5 +1,13 @@
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 pub const EPSILON: f32 = 1e-5;
+pub trait EpsilonEquals {
+    fn epsilon_equals(self, other: Self) -> bool;
+}
+impl EpsilonEquals for f32 {
+    fn epsilon_equals(self, other: Self) -> bool {
+        (self - other).abs() <= EPSILON
+    }
+}
 #[derive(Copy, Clone, Debug, Default)]
 pub struct Vec3 {
     pub x: f32,
@@ -298,6 +306,38 @@ impl Mul for Quaternion {
             x: r1 * x2 + r2 * x1 + y1 * z2 - z1 * y2,
             y: r1 * y2 - x1 * z2 + y1 * r2 + z1 * x2,
             z: r1 * z2 + x1 * y2 - y1 * x2 + z1 * r2,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct Plane {
+    pub point: Vec3,
+    pub normal: Vec3,
+}
+impl Plane {
+    pub fn distance_to_point(&self, point: Vec3) -> f32 {
+        ((point - self.point).dot(&self.normal)) / self.normal.mag()
+    }
+    pub fn intersect_with_line_segment(&self, point1: Vec3, point2: Vec3) -> Vec3 {
+        let dir = point2 - point1;
+        let numerator = self.normal.dot(&(self.point - point1));
+        let denominator = self.normal.dot(&dir);
+        if denominator.abs() < EPSILON {
+            panic!(
+                "line is parallel to plane, {:?}, {:?}, {:?}",
+                self, point1, point2
+            );
+        } else {
+            let t = numerator / denominator;
+            if t >= 0.0 && t <= 1.0 {
+                point1 + t * dir
+            } else {
+                panic!(
+                    "line segment does not intersect with plane, {:?}, {:?}, {:?}",
+                    self, point1, point2
+                );
+            }
         }
     }
 }

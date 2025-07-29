@@ -17,6 +17,23 @@ const GRAV_ACCEL: Vec3 = Vec3 {
     y: -9.81,
     z: 0.0,
 };
+const GLOBAL_AXES: [Vec3; 3] = [
+    Vec3 {
+        x: 1.0,
+        y: 0.0,
+        z: 0.0,
+    },
+    Vec3 {
+        x: 0.0,
+        y: 1.0,
+        z: 0.0,
+    },
+    Vec3 {
+        x: 0.0,
+        y: 0.0,
+        z: 1.0,
+    },
+];
 
 impl World {
     #[allow(clippy::new_without_default)]
@@ -104,11 +121,20 @@ pub struct Cuboid {
     pub corners: [Vec3; 8],
     pub aabb: AABB,
     pub frozen: bool,
+    pub face_axes: [Vec3; 3],
 }
 impl Cuboid {
     pub fn update_derived(&mut self) {
         self.calc_corners();
         self.calc_aabb();
+        self.calc_face_axes();
+    }
+    fn calc_face_axes(&mut self) {
+        self.face_axes = [
+            GLOBAL_AXES[0].rotate(self.rotation).normalize(),
+            GLOBAL_AXES[1].rotate(self.rotation).normalize(),
+            GLOBAL_AXES[2].rotate(self.rotation).normalize(),
+        ];
     }
     pub fn get_mass(&self) -> f32 {
         self.scale.mag() * DENSITY
@@ -189,6 +215,7 @@ impl Default for Cuboid {
             angular_velocity: Vec3::default(),
             corners: [Vec3::default(); 8],
             aabb: AABB::default(),
+            face_axes: [Vec3::default(); 3],
             frozen: false,
         }
     }
