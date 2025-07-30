@@ -126,7 +126,7 @@ impl World {
                 }
             }
         }
-        for collision in &self.collisions {
+        for collision in &mut self.collisions {
             apply_impulse(collision, &mut self.instances, dt);
         }
     }

@@ -14,7 +14,14 @@ pub struct CollisionInfo {
     pub other_index: usize,
     pub mtv: Vec3,
     pub collision_type: CollisionType,
-    pub manifold: [Option<(Vec3, f32)>; MAX_MANIFOLD_VERTICES],
+    pub manifold: [Option<ContactPoint>; MAX_MANIFOLD_VERTICES],
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct ContactPoint {
+    pub point: Vec3,
+    pub depth: f32,
+    pub accumulated_impulse: f32,
 }
 fn sat(instance: &Cuboid, other: &Cuboid) -> Option<(Vec3, CollisionType)> {
     let mut edge_axes = [Vec3::default(); 9];
@@ -74,7 +81,7 @@ fn calc_contact_manifold(
     instance: &Cuboid,
     other: &Cuboid,
     collision_normal: Vec3,
-) -> [Option<(Vec3, f32)>; MAX_MANIFOLD_VERTICES] {
+) -> [Option<ContactPoint>; MAX_MANIFOLD_VERTICES] {
     //sutherland-hodgman
 
     //remember collision_normal is other->self
@@ -167,7 +174,11 @@ fn calc_contact_manifold(
         };
         let depth = reference_plane.distance_to_point(&point);
         if depth <= 0.0 {
-            manifold[i] = Some((point, depth.abs()));
+            manifold[i] = Some(ContactPoint {
+                point,
+                depth: depth.abs(),
+                accumulated_impulse: 0.0,
+            });
         }
     }
     manifold
@@ -193,7 +204,7 @@ fn order_face_vertices(normal: &Vec3, mut vertices: [Vec3; 4]) -> [Vec3; 4] {
 }
 fn get_face_vertices(normal: &Vec3, instance: &Cuboid) -> [Vec3; 4] {
     let normal = normal.normalize();
-    let mut cube_vertices = instance.corners.clone();
+    let mut cube_vertices = instance.corners;
     let centre = instance.centre;
     cube_vertices.sort_by(|a, b| {
         let distance1 = (*a - centre).dot(&normal);
@@ -222,7 +233,7 @@ fn most_aligned_with(vectors: &[Vec3], target: &Vec3) -> Vec3 {
     }
     best.0
 }
-pub fn apply_impulse(info: &CollisionInfo, instances: &mut [Cuboid; N + 1], dt: f32) {
+pub fn apply_impulse(info: &mut CollisionInfo, instances: &mut [Cuboid; N + 1], dt: f32) {
     let (instance_index, other_index) = (
         info.instance_index.min(info.other_index),
         info.instance_index.max(info.other_index),
@@ -233,19 +244,26 @@ pub fn apply_impulse(info: &CollisionInfo, instances: &mut [Cuboid; N + 1], dt: 
     let other = &mut slice2[0];
     const RESTITUTION_COEFF: f32 = 0.5;
     const SOLVER_ITERATIONS: i32 = 8;
-    const BAUMGARTE_BIAS: f32 = 0.2;
+    const BAUMGARTE_BIAS: f32 = 0.1;
+    const PENETRATION_TOLERANCE: f32 = 0.001;
     let collision_normal = info.mtv.normalize();
     let inv_m1 = instance.get_inverse_mass();
     let inv_m2 = other.get_inverse_mass();
-    let e = RESTITUTION_COEFF;
     let inv_moi1 = instance.get_inverse_moment_of_inertia();
     let inv_moi2 = other.get_inverse_moment_of_inertia();
 
     for _ in 0..SOLVER_ITERATIONS {
-        for point in info.manifold {
-            let Some((point, depth)) = point else {
+        for point in &mut info.manifold {
+            let Some(ContactPoint {
+                point,
+                depth,
+                accumulated_impulse,
+            }) = point
+            else {
                 break;
             };
+            let point = *point;
+            let depth = (*depth - PENETRATION_TOLERANCE).max(0.0);
             let v1 = instance.velocity;
             let v2 = other.velocity;
             let w1 = instance.angular_velocity;
@@ -253,16 +271,21 @@ pub fn apply_impulse(info: &CollisionInfo, instances: &mut [Cuboid; N + 1], dt: 
             let r1 = point - instance.centre;
             let r2 = point - other.centre;
             let v_rel = (v1 + w1.cross(&r1)) - (v2 + w2.cross(&r2));
-            let v_n = v_rel.dot(&collision_normal);
+            let v_n = v_rel.dot(&collision_normal); //aka v_error
             //baumgarte stabilization
-            let bias = (BAUMGARTE_BIAS / dt) * depth.max(0.0);
+            let baumgarte_bias = (BAUMGARTE_BIAS / dt) * depth.max(0.0);
 
             let rot_inertia1 =
                 (&inv_moi1 * &(r1.cross(&collision_normal)).cross(&r1)).dot(&collision_normal);
             let rot_inertia2 =
                 (&inv_moi2 * &(r2.cross(&collision_normal)).cross(&r2)).dot(&collision_normal);
             let effective_mass = inv_m1 + inv_m2 + rot_inertia1 + rot_inertia2;
-            let impulse_mag = (-(1.0 + e) * v_n + bias) / effective_mass;
+            let delta_impulse_mag =
+                (-(1.0 + RESTITUTION_COEFF) * v_n.min(0.0) + baumgarte_bias) / effective_mass;
+            let prev_impulse = *accumulated_impulse;
+            *accumulated_impulse += delta_impulse_mag;
+            *accumulated_impulse = accumulated_impulse.max(0.0);
+            let impulse_mag = *accumulated_impulse - prev_impulse;
             let impulse = impulse_mag * collision_normal;
             instance.velocity += impulse * inv_m1;
             instance.angular_velocity += &inv_moi1 * &(r1.cross(&impulse));
@@ -348,7 +371,7 @@ mod tests {
         };
         c1.update_derived();
         c2.update_derived();
-        let manifold: Vec<(Vec3, f32)> = calc_contact_manifold(
+        let manifold: Vec<ContactPoint> = calc_contact_manifold(
             &c1,
             &c2,
             Vec3 {
@@ -362,7 +385,7 @@ mod tests {
         .collect();
         assert_eq!(manifold.len(), 4);
         assert_eq!(
-            manifold.iter().map(|x| x.1).collect::<Vec<_>>(),
+            manifold.iter().map(|x| x.depth).collect::<Vec<_>>(),
             vec![0.5, 0.5, 0.5, 0.5]
         );
     }
