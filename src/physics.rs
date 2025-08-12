@@ -265,7 +265,7 @@ pub fn resolve_collisions(collisions: &[CollisionInfo], instances: &mut [Cuboid]
 
             const RESTITUTION_COEFF: f32 = 0.5;
             const STATIC_FRICTION_COEFF: f32 = 0.6;
-            const BAUMGARTE_BIAS: f32 = 0.1;
+            const BAUMGARTE_BIAS: f32 = 0.3;
             const PENETRATION_TOLERANCE: f32 = 0.001;
             let collision_normal = info.mtv.normalize().unwrap();
             let inv_m1 = instance.get_inverse_mass();

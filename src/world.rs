@@ -1,6 +1,7 @@
 use crate::{
     math::{EPSILON, Mat3, Quaternion, Vec3},
     physics::{CollisionInfo, detect_collision, resolve_collisions},
+    scenes::{N, Scene},
 };
 
 pub struct World {
@@ -10,9 +11,7 @@ pub struct World {
 }
 
 // SI units
-pub const N: usize = 9; //number of cuboids minus floor
 const DENSITY: f32 = 1.0;
-const INSTANCE_SPACING: f32 = 2.0;
 const GRAV_ACCEL: Vec3 = Vec3 {
     x: 0.0,
     y: -9.81,
@@ -39,68 +38,9 @@ const GLOBAL_AXES: [Vec3; 3] = [
 impl World {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
-        let num_cols = N.isqrt();
         let mut instances = Vec::with_capacity(N + 1);
-        /* instances[0] = Cuboid {
-            position: Vec3 {
-                x: 0.0,
-                y: 10.0,
-                z: 0.0,
-            },
-            rotation: Quaternion::from_angle(
-                &Vec3 {
-                    x: std::f32::consts::FRAC_1_SQRT_2,
-                    y: 0.0,
-                    z: -std::f32::consts::FRAC_1_SQRT_2,
-                },
-                2.1862,
-            ),
-            ..Default::default()
-        }; */
-        /* instances[0] = Cuboid::default();
-        instances[0].position = Vec3 {
-            x: 0.0,
-            y: 0.5,
-            z: 0.0,
-        }; */
-        // instances[0].update_derived(); //TODO: temporary
+        Scene::SlantedTower.populate_scene(&mut instances);
 
-        for i in 0..N {
-            let row = i / num_cols;
-            let col = i % num_cols;
-            let scale = Vec3 {
-                x: 1.0,
-                y: 1.0,
-                z: 1.0,
-            };
-            // let position = Vec3 {
-            //     x: row as f32 * INSTANCE_SPACING * scale.x,
-            //     y: 10.0,
-            //     z: col as f32 * INSTANCE_SPACING * scale.z,
-            // };
-            let position = Vec3 {
-                x: i as f32 * 0.1,
-                y: 10.0 + i as f32 * INSTANCE_SPACING,
-                z: 0.0,
-            };
-
-            let mut instance = Cuboid {
-                position,
-                scale,
-                rotation: Quaternion::from_angle(
-                    &Vec3 {
-                        x: 1.0,
-                        y: 0.0,
-                        z: 0.0,
-                    },
-                    (i + 1) as f32 * 0.5,
-                ),
-                index: i,
-                ..Default::default()
-            };
-            instances.push(instance);
-            instance.update_derived();
-        }
         let mut floor = Cuboid {
             scale: Vec3 {
                 x: 200.0,
@@ -127,7 +67,7 @@ impl World {
     }
 
     pub fn update(&mut self, dt: f32) {
-        let dt = 1.0 / 180.0; //less random simulations
+        let dt = 1.0 / 180.0; //HACK: less random simulations, adapting to refresh rate prob better or something
         for i in 0..N {
             let instance = &mut self.instances[i];
             instance.velocity += GRAV_ACCEL * dt;

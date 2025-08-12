@@ -1,6 +1,7 @@
 pub mod camera;
 pub mod math;
 pub mod physics;
+pub mod scenes;
 pub mod window;
 pub mod world;
 

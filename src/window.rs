@@ -1,6 +1,7 @@
 use crate::camera::{Camera, CameraController};
 use crate::math::{Mat4, Vec3};
-use crate::world::{Cuboid, CuboidRaw, N, World};
+use crate::scenes::N;
+use crate::world::{Cuboid, CuboidRaw, World};
 use crate::{CUBE_INDICES, CUBE_VERTICES, FLOOR_VERTICES, Vertex};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
