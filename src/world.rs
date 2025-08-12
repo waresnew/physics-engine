@@ -39,7 +39,7 @@ impl World {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         let mut instances = Vec::with_capacity(N + 1);
-        Scene::SlantedTower.populate_scene(&mut instances);
+        Scene::Meteor.populate_scene(&mut instances);
 
         let mut floor = Cuboid {
             scale: Vec3 {
