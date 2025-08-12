@@ -11,7 +11,6 @@ pub struct World {
 }
 
 // SI units
-const DENSITY: f32 = 1.0;
 const GRAV_ACCEL: Vec3 = Vec3 {
     x: 0.0,
     y: -9.81,
@@ -39,7 +38,7 @@ impl World {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         let mut instances = Vec::with_capacity(N + 1);
-        Scene::Meteor.populate_scene(&mut instances);
+        Scene::SlantedTower.populate_scene(&mut instances);
 
         let mut floor = Cuboid {
             scale: Vec3 {
@@ -70,17 +69,19 @@ impl World {
         let dt = 1.0 / 180.0; //HACK: less random simulations, adapting to refresh rate prob better or something
         for i in 0..N {
             let instance = &mut self.instances[i];
-            instance.velocity += GRAV_ACCEL * dt;
-            instance.position += instance.velocity * dt;
-            if instance.angular_velocity.mag() > EPSILON * dt {
-                instance.rotation = (Quaternion::from_angle(
-                    &instance.angular_velocity.normalize().unwrap(),
-                    instance.angular_velocity.mag() * dt,
-                ) * instance.rotation)
-                    .normalize();
-            }
+            if !instance.frozen {
+                instance.velocity += GRAV_ACCEL * dt;
+                instance.position += instance.velocity * dt;
+                if instance.angular_velocity.mag() > EPSILON * dt {
+                    instance.rotation = (Quaternion::from_angle(
+                        &instance.angular_velocity.normalize().unwrap(),
+                        instance.angular_velocity.mag() * dt,
+                    ) * instance.rotation)
+                        .normalize();
+                }
 
-            instance.update_derived();
+                instance.update_derived();
+            }
 
             if instance.aabb.intersects(&self.floor.aabb) {
                 if let Some(collision_info) = detect_collision(instance, &self.floor) {
@@ -171,6 +172,7 @@ pub struct Cuboid {
     pub aabb: AABB,
     pub frozen: bool,
     pub face_axes: [Vec3; 3],
+    pub density: f32,
 }
 impl Cuboid {
     pub fn update_derived(&mut self) {
@@ -225,7 +227,7 @@ impl Cuboid {
         if self.frozen {
             0.0
         } else {
-            1.0 / (self.scale.mag() * DENSITY)
+            1.0 / (self.scale.mag() * self.density)
         }
     }
     fn calc_corners(&mut self) {
@@ -307,6 +309,7 @@ impl Default for Cuboid {
             face_axes: [Vec3::default(); 3],
             frozen: false,
             index: 0,
+            density: 1.0,
         }
     }
 }

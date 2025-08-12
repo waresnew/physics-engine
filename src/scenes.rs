@@ -1,19 +1,23 @@
+use std::f32::consts::PI;
+
 use crate::{
     math::{Quaternion, Vec3},
     world::Cuboid,
 };
 
-pub const N: usize = 90; //number of cuboids minus floor
+pub const N: usize = 9; //number of cuboids minus floor
 
 //TODO: take in cmd args from cargo run and use that to set N and Scene, then i can easily
 //reproduce scenes with the same command
 
-//TODO: non unit scale (thin/long/fat prisms),  pile of non unit scale prisms on ground whiel i drop more cubes on them, dropping cubes on packed cuboids or leaning tower structure (those are already on the ground) and watch them collapse
 pub enum Scene {
     Grid,
-    SlantedTower,
+    SlantedTower, //stacking is visible at low N like 9
     Meteor,
     InvertedMeteor,
+    Catapult,
+    Sticks,
+    Platforms,
 }
 
 impl Scene {
@@ -172,6 +176,115 @@ impl Scene {
                         z: 5.0,
                     },
                     true,
+                );
+            }
+            Scene::Catapult => {
+                assert_eq!(N % 4, 0, "N for catapult must be multiple of 4");
+                const INSTANCE_SPACING: f32 = 2.0;
+                let mut i = 0;
+                while i < N / 4 * 4 {
+                    let x_coord = i as f32 * INSTANCE_SPACING;
+                    let mut fulcrum = Cuboid {
+                        position: Vec3 {
+                            x: x_coord,
+                            y: 0.5,
+                            z: 0.0,
+                        },
+                        scale: Vec3 {
+                            x: 1.0,
+                            y: 1.0,
+                            z: 0.25,
+                        },
+                        frozen: true,
+                        index: i,
+                        ..Default::default()
+                    };
+                    fulcrum.update_derived();
+                    instances.push(fulcrum);
+                    i += 1;
+                    let mut lever = Cuboid {
+                        position: Vec3 {
+                            x: x_coord,
+                            y: 2.0,
+                            z: -0.25,
+                        },
+                        scale: Vec3 {
+                            x: 1.0,
+                            y: 0.5,
+                            z: 4.0,
+                        },
+                        rotation: Quaternion::from_angle(
+                            &Vec3 {
+                                x: 1.0,
+                                y: 0.0,
+                                z: 0.0,
+                            },
+                            PI / 6.0,
+                        ),
+                        index: i,
+                        ..Default::default()
+                    };
+                    i += 1;
+                    lever.update_derived();
+                    instances.push(lever);
+                    let mut projectile = Cuboid {
+                        position: Vec3 {
+                            x: x_coord,
+                            y: 2.5,
+                            z: -0.25,
+                        },
+                        scale: Vec3 {
+                            x: 0.25,
+                            y: 0.25,
+                            z: 0.25,
+                        },
+                        index: i,
+                        ..Default::default()
+                    };
+                    i += 1;
+                    projectile.update_derived();
+                    instances.push(projectile);
+
+                    let mut heavy = Cuboid {
+                        position: Vec3 {
+                            x: x_coord,
+                            y: 12.0,
+                            z: 0.9,
+                        },
+                        scale: Vec3 {
+                            x: 1.0,
+                            y: 1.0,
+                            z: 1.0,
+                        },
+                        density: 3.0,
+                        index: i,
+                        ..Default::default()
+                    };
+                    i += 1;
+                    heavy.update_derived();
+                    instances.push(heavy);
+                }
+            }
+            Scene::Sticks => {
+                Self::gen_grid(
+                    instances,
+                    4.0,
+                    Vec3 {
+                        x: 1.0,
+                        y: 4.0,
+                        z: 1.0,
+                    },
+                );
+            }
+            Scene::Platforms => {
+                Self::gen_grid(
+                    instances,
+                    1.5,
+                    Vec3 {
+                        x: 4.0,
+                        y: 1.0,
+                        z: 4.0,
+                    },
                 );
             }
         }

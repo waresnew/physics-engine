@@ -1,5 +1,5 @@
 use crate::{
-    math::{EPSILON, Plane, Vec3},
+    math::{EPSILON, EpsilonEquals, Plane, Vec3},
     world::Cuboid,
 };
 const MAX_MANIFOLD_VERTICES: usize = 8;
@@ -319,6 +319,9 @@ pub fn resolve_collisions(collisions: &[CollisionInfo], instances: &mut [Cuboid]
                         + inv_m2 //from COM
                         + unit_delta_v1.dot(&impulse_dir) //from point
                         + unit_delta_v2.dot(&impulse_dir); //from point
+                    if effective_inv_mass.epsilon_equals(0.0) {
+                        return None;
+                    }
 
                     let target_velo = match impulse_type {
                         ImpulseType::Normal => {
