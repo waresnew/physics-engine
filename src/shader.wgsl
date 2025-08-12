@@ -66,7 +66,7 @@ fn srgb_to_linear(colour: f32) -> f32 {
 }
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    let light_dir = -normalize(vec3<f32>(0.0, -1.0, 0.0));
+    let light_dir = -normalize(vec3<f32>(-0.5, -1.0, 0.5));
     let light_colour = vec3<f32>(1.0, 1.0, 1.0);
     let linear_colour = vec3<f32>(
         srgb_to_linear(in.color.r),

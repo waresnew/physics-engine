@@ -1,5 +1,5 @@
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
-pub const EPSILON: f32 = 1e-5;
+pub const EPSILON: f32 = 1e-4;
 pub trait EpsilonEquals {
     fn epsilon_equals(self, other: Self) -> bool;
 }
@@ -8,7 +8,7 @@ impl EpsilonEquals for f32 {
         (self - other).abs() <= EPSILON
     }
 }
-#[derive(PartialEq, Copy, Clone, Debug, Default)]
+#[derive(PartialEq, PartialOrd, Copy, Clone, Debug, Default)]
 pub struct Vec3 {
     pub x: f32,
     pub y: f32,
@@ -128,8 +128,11 @@ impl Vec3 {
     pub fn mag(&self) -> f32 {
         (self.x * self.x + self.y * self.y + self.z * self.z).sqrt()
     }
-    pub fn normalize(self) -> Self {
-        self / self.mag()
+    pub fn normalize(self) -> Option<Self> {
+        if self.mag().abs() < f32::EPSILON {
+            return None;
+        }
+        Some(self / self.mag())
     }
     pub fn dot(&self, &other: &Self) -> f32 {
         self.x * other.x + self.y * other.y + self.z * other.z
@@ -144,6 +147,15 @@ impl Vec3 {
 
     pub fn rotate(&self, quaternion: Quaternion) -> Self {
         (quaternion * Quaternion::from_vec3(self) * quaternion.conj()).to_vec3()
+    }
+
+    pub fn distance_squared(&self, other: &Vec3) -> f32 {
+        (self.x - other.x) * (self.x - other.x)
+            + (self.y - other.y) * (self.y - other.y)
+            + (self.z - other.z) * (self.z - other.z)
+    }
+    pub fn distance(&self, other: &Vec3) -> f32 {
+        self.distance_squared(other).sqrt()
     }
 }
 //1d array so i can enforce column major when sending to shader
@@ -194,6 +206,7 @@ impl Mul for Mat4 {
         ans
     }
 }
+#[derive(Debug, PartialEq)]
 pub struct Mat3 {
     pub array: [f32; 9],
 }
@@ -207,6 +220,18 @@ impl Mat3 {
                 0.0, 0.0, 0.0,
                 0.0, 0.0, 0.0,
             ],
+        }
+    }
+
+    #[rustfmt::skip]
+    pub fn transpose(&self) ->Self {
+        let a=self.array;
+        Self {
+            array: [
+                a[0], a[3],a[6],
+                a[1],a[4],a[7],
+                a[2],a[5],a[8]
+            ]
         }
     }
 }
@@ -269,7 +294,7 @@ impl Quaternion {
     }
 
     pub fn from_angle(axis: &Vec3, angle: f32) -> Self {
-        let axis = axis.normalize();
+        let axis = axis.normalize().unwrap();
         let (sin, cos) = (angle / 2.0).sin_cos();
         Self {
             real: cos,
@@ -361,7 +386,7 @@ impl Mul for Quaternion {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Default, PartialEq, PartialOrd, Clone, Copy)]
 pub struct Plane {
     pub point: Vec3,
     pub normal: Vec3,
@@ -370,24 +395,20 @@ impl Plane {
     pub fn distance_to_point(&self, point: &Vec3) -> f32 {
         ((point - &self.point).dot(&self.normal)) / self.normal.mag()
     }
-    pub fn intersect_with_line_segment(&self, point1: &Vec3, point2: &Vec3) -> Vec3 {
+    pub fn intersect_with_line_segment(&self, point1: &Vec3, point2: &Vec3) -> Option<Vec3> {
         let dir = point2 - point1;
         let numerator = self.normal.dot(&(&self.point - point1));
         let denominator = self.normal.dot(&dir);
         if denominator.abs() < EPSILON {
-            panic!(
-                "line is parallel to plane, {:?}, {:?}, {:?}",
-                self, point1, point2
-            );
+            eprintln!("line segment parallel to plane");
+            None
         } else {
             let t = numerator / denominator;
-            if t >= 0.0 && t <= 1.0 {
-                point1 + &(t * dir)
+            if (-EPSILON..=1.0 + EPSILON).contains(&t) {
+                Some(point1 + &(t * dir))
             } else {
-                panic!(
-                    "line segment does not intersect with plane, {:?}, {:?}, {:?}",
-                    self, point1, point2
-                );
+                eprintln!("line segment doesn't intersect with plane");
+                None
             }
         }
     }

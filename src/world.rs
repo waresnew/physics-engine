@@ -1,17 +1,17 @@
 use crate::{
     math::{EPSILON, Mat3, Quaternion, Vec3},
-    physics::{CollisionInfo, apply_impulse, detect_collision},
+    physics::{CollisionInfo, detect_collision, resolve_collisions},
 };
 
 pub struct World {
-    pub instances: [Cuboid; N + 1],
+    pub instances: Vec<Cuboid>,
     floor: Cuboid,
     collisions: Vec<CollisionInfo>,
 }
 
 // SI units
-pub const N: usize = 1; //number of cuboids minus floor
-const DENSITY: f32 = 850.0;
+pub const N: usize = 9; //number of cuboids minus floor
+const DENSITY: f32 = 1.0;
 const INSTANCE_SPACING: f32 = 2.0;
 const GRAV_ACCEL: Vec3 = Vec3 {
     x: 0.0,
@@ -40,7 +40,31 @@ impl World {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         let num_cols = N.isqrt();
-        let mut instances: [Cuboid; N + 1] = [Cuboid::default(); N + 1];
+        let mut instances = Vec::with_capacity(N + 1);
+        /* instances[0] = Cuboid {
+            position: Vec3 {
+                x: 0.0,
+                y: 10.0,
+                z: 0.0,
+            },
+            rotation: Quaternion::from_angle(
+                &Vec3 {
+                    x: std::f32::consts::FRAC_1_SQRT_2,
+                    y: 0.0,
+                    z: -std::f32::consts::FRAC_1_SQRT_2,
+                },
+                2.1862,
+            ),
+            ..Default::default()
+        }; */
+        /* instances[0] = Cuboid::default();
+        instances[0].position = Vec3 {
+            x: 0.0,
+            y: 0.5,
+            z: 0.0,
+        }; */
+        // instances[0].update_derived(); //TODO: temporary
+
         for i in 0..N {
             let row = i / num_cols;
             let col = i % num_cols;
@@ -49,17 +73,33 @@ impl World {
                 y: 1.0,
                 z: 1.0,
             };
+            // let position = Vec3 {
+            //     x: row as f32 * INSTANCE_SPACING * scale.x,
+            //     y: 10.0,
+            //     z: col as f32 * INSTANCE_SPACING * scale.z,
+            // };
             let position = Vec3 {
-                x: row as f32 * INSTANCE_SPACING * scale.x,
-                y: 10.0,
-                z: col as f32 * INSTANCE_SPACING * scale.z,
+                x: i as f32 * 0.1,
+                y: 10.0 + i as f32 * INSTANCE_SPACING,
+                z: 0.0,
             };
-            instances[i] = Cuboid {
+
+            let mut instance = Cuboid {
                 position,
                 scale,
+                rotation: Quaternion::from_angle(
+                    &Vec3 {
+                        x: 1.0,
+                        y: 0.0,
+                        z: 0.0,
+                    },
+                    (i + 1) as f32 * 0.5,
+                ),
                 index: i,
                 ..Default::default()
             };
+            instances.push(instance);
+            instance.update_derived();
         }
         let mut floor = Cuboid {
             scale: Vec3 {
@@ -77,7 +117,7 @@ impl World {
             ..Default::default()
         };
         floor.update_derived();
-        instances[N] = floor;
+        instances.push(floor);
 
         Self {
             instances,
@@ -87,19 +127,19 @@ impl World {
     }
 
     pub fn update(&mut self, dt: f32) {
-        self.collisions.clear();
+        let dt = 1.0 / 180.0; //less random simulations
         for i in 0..N {
             let instance = &mut self.instances[i];
             instance.velocity += GRAV_ACCEL * dt;
             instance.position += instance.velocity * dt;
             if instance.angular_velocity.mag() > EPSILON * dt {
-                instance.rotation = (instance.rotation
-                    * Quaternion::from_angle(
-                        &instance.angular_velocity.normalize(),
-                        instance.angular_velocity.mag() * dt,
-                    ))
-                .normalize();
+                instance.rotation = (Quaternion::from_angle(
+                    &instance.angular_velocity.normalize().unwrap(),
+                    instance.angular_velocity.mag() * dt,
+                ) * instance.rotation)
+                    .normalize();
             }
+
             instance.update_derived();
 
             if instance.aabb.intersects(&self.floor.aabb) {
@@ -126,9 +166,8 @@ impl World {
                 }
             }
         }
-        for collision in &mut self.collisions {
-            apply_impulse(collision, &mut self.instances, dt);
-        }
+        resolve_collisions(&self.collisions, &mut self.instances, dt);
+        self.collisions.clear();
     }
 }
 
@@ -144,6 +183,40 @@ mod tests {
         assert_eq!(count1, 4);
         assert_eq!(count2, 4);
     }
+
+    #[test]
+    fn test_cuboid_model_matrix() {
+        let cuboid = Cuboid {
+            position: Vec3 {
+                x: 1.0,
+                y: 2.0,
+                z: 3.0,
+            },
+            rotation: Quaternion::from_angle(
+                &Vec3 {
+                    x: 0.0,
+                    y: 1.0,
+                    z: 0.0,
+                },
+                std::f32::consts::FRAC_PI_2, // 90 degrees CCW around y axis
+            ),
+            ..Default::default()
+        };
+
+        let raw = cuboid.to_raw();
+
+        #[rustfmt::skip]
+        let expected_model = [
+            0.0, 0.0, -1.0, 0.0, //column major
+            0.0, 1.0, 0.0, 0.0,
+            1.0, 0.0, 0.0, 0.0,
+            1.0, 2.0, 3.0, 1.0,
+        ];
+        dbg!(raw.model);
+        for (expected, actual) in expected_model.iter().zip(raw.model.iter()) {
+            assert!((expected - actual).abs() < EPSILON);
+        }
+    }
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -153,27 +226,27 @@ pub struct Cuboid {
     pub rotation: Quaternion,
     pub velocity: Vec3,         //ms^-1
     pub angular_velocity: Vec3, //rads^-1
-    pub scale: Vec3,
+    pub scale: Vec3,            //local
     pub corners: [Vec3; 8],
     pub aabb: AABB,
     pub frozen: bool,
     pub face_axes: [Vec3; 3],
-    pub centre: Vec3,
 }
 impl Cuboid {
     pub fn update_derived(&mut self) {
         self.calc_corners();
         self.calc_aabb();
         self.calc_face_axes();
-        self.calc_centre();
     }
-    fn calc_centre(&mut self) {
-        let mut centre = Vec3::default();
-        for v in self.corners {
-            centre += v;
-        }
-        centre /= 8.0;
-        self.centre = centre;
+    pub fn get_all_face_axes(&self) -> [Vec3; 6] {
+        [
+            self.face_axes[0],
+            self.face_axes[1],
+            self.face_axes[2],
+            -self.face_axes[0],
+            -self.face_axes[1],
+            -self.face_axes[2],
+        ]
     }
     #[rustfmt::skip]
     pub fn get_inverse_moment_of_inertia(&self)->Mat3 {
@@ -189,19 +262,23 @@ impl Cuboid {
         let ixx = (1.0/12.0) * m * (y*y + z*z);
         let iyy = (1.0/12.0) * m * (x*x + z*z);
         let izz = (1.0/12.0) * m * (x*x + y*y);
-        Mat3 {
+        let local = Mat3 {
             array: [
                 1.0/ixx,0.0,0.0,
                 0.0,1.0/iyy,0.0,
                 0.0,0.0,1.0/izz
             ]
-        }
+        };
+        let rotation_mat=self.rotation.to_mat3();
+        let transpose=rotation_mat.transpose();
+        rotation_mat*local*transpose //OPTIMIZE: cache in update_derived()
+
     }
     fn calc_face_axes(&mut self) {
         self.face_axes = [
-            GLOBAL_AXES[0].rotate(self.rotation).normalize(),
-            GLOBAL_AXES[1].rotate(self.rotation).normalize(),
-            GLOBAL_AXES[2].rotate(self.rotation).normalize(),
+            GLOBAL_AXES[0].rotate(self.rotation).normalize().unwrap(),
+            GLOBAL_AXES[1].rotate(self.rotation).normalize().unwrap(),
+            GLOBAL_AXES[2].rotate(self.rotation).normalize().unwrap(),
         ];
     }
     pub fn get_inverse_mass(&self) -> f32 {
@@ -265,9 +342,9 @@ impl Cuboid {
         let rotation_matrix=self.rotation.to_mat3();
         CuboidRaw {
             model:[
-                    rotation_matrix.array[0]*self.scale.x, rotation_matrix.array[3]*self.scale.x, rotation_matrix.array[6]*self.scale.x, 0.0,
-                    rotation_matrix.array[1]*self.scale.y, rotation_matrix.array[4]*self.scale.y, rotation_matrix.array[7]*self.scale.y, 0.0,
-                    rotation_matrix.array[2]*self.scale.z, rotation_matrix.array[5]*self.scale.z, rotation_matrix.array[8]*self.scale.z, 0.0,
+                    rotation_matrix.array[0]*self.scale.x, rotation_matrix.array[1]*self.scale.x, rotation_matrix.array[2]*self.scale.x, 0.0,
+                    rotation_matrix.array[3]*self.scale.y, rotation_matrix.array[4]*self.scale.y, rotation_matrix.array[5]*self.scale.y, 0.0,
+                    rotation_matrix.array[6]*self.scale.z, rotation_matrix.array[7]*self.scale.z, rotation_matrix.array[8]*self.scale.z, 0.0,
                     self.position.x,        self.position.y,        self.position.z,                               1.0,
             ]
         }
@@ -290,7 +367,6 @@ impl Default for Cuboid {
             face_axes: [Vec3::default(); 3],
             frozen: false,
             index: 0,
-            centre: Vec3::default(),
         }
     }
 }

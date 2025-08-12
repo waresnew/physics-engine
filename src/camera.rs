@@ -19,14 +19,14 @@ impl Camera {
             x: pitch_cos*yaw_sin,
             y: pitch_sin,
             z: -pitch_cos*yaw_cos, // 0 yaw is (0,0,-1) and 90 yaw is (1,0,0)
-        }.normalize();
+        }.normalize().unwrap();
         let global_up = Vec3 {
             x: 0.0,
             y: 1.0,
             z: 0.0,
         };
-        let right = forward.cross(&global_up).normalize();
-        let local_up = right.cross(&forward).normalize();
+        let right = forward.cross(&global_up).normalize().unwrap();
+        let local_up = right.cross(&forward).normalize().unwrap();
         Mat4 {
             array: [
                 //each row is a column
@@ -41,7 +41,7 @@ impl Camera {
     #[rustfmt::skip]
     pub fn calc_projection_matrix(&self) -> Mat4 {
         const Z_NEAR: f32 = 0.1;
-        const Z_FAR: f32 = 100.0; 
+        const Z_FAR: f32 = 100.0;
         const FOV_Y: f32 = std::f32::consts::PI / 2.0;
         let f = 1.0 / ((FOV_Y / 2.0).tan());
         Mat4 {
