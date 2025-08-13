@@ -5,7 +5,7 @@ use crate::{
     world::Cuboid,
 };
 
-pub const N: usize = 9; //number of cuboids minus floor
+pub const N: usize = 8 * 8 * 8; //number of cuboids minus floor
 
 //TODO: take in cmd args from cargo run and use that to set N and Scene, then i can easily
 //reproduce scenes with the same command
@@ -18,6 +18,7 @@ pub enum Scene {
     Catapult,
     Sticks,
     Platforms,
+    Cube,
 }
 
 impl Scene {
@@ -137,7 +138,7 @@ impl Scene {
                                 y: 0.0,
                                 z: 0.0,
                             },
-                            i as f32 * 0.5 / N as f32,
+                            i as f32 * 0.5 / 9.0,
                         ),
                         index: i,
                         ..Default::default()
@@ -286,6 +287,42 @@ impl Scene {
                         z: 4.0,
                     },
                 );
+            }
+            Scene::Cube => {
+                let len = (N as f32).cbrt() as usize;
+                const INSTANCE_SPACING: f32 = 2.0;
+                for i in 0..len {
+                    for j in 0..len {
+                        for k in 0..len {
+                            let index = (i * len + j) * len + k;
+                            let mut instance = Cuboid {
+                                position: Vec3 {
+                                    x: i as f32 * INSTANCE_SPACING * 1.0,
+                                    y: 10.0 + j as f32 * INSTANCE_SPACING * 1.0,
+                                    z: k as f32 * INSTANCE_SPACING * 1.0,
+                                },
+                                scale: Vec3 {
+                                    x: 1.0,
+                                    y: 1.0,
+                                    z: 1.0,
+                                },
+                                index,
+
+                                rotation: Quaternion::from_angle(
+                                    &Vec3 {
+                                        x: 0.0,
+                                        y: 0.0,
+                                        z: 1.0,
+                                    },
+                                    index as f32 * 2.0 / N as f32,
+                                ),
+                                ..Default::default()
+                            };
+                            instance.update_derived();
+                            instances.push(instance);
+                        }
+                    }
+                }
             }
         }
     }

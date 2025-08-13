@@ -38,7 +38,7 @@ impl World {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         let mut instances = Vec::with_capacity(N + 1);
-        Scene::SlantedTower.populate_scene(&mut instances);
+        Scene::Cube.populate_scene(&mut instances);
 
         let mut floor = Cuboid {
             scale: Vec3 {
@@ -66,6 +66,7 @@ impl World {
     }
 
     pub fn update(&mut self, dt: f32) {
+        print!("\rTPS: {}", 1.0 / dt);
         let dt = 1.0 / 180.0; //HACK: less random simulations, adapting to refresh rate prob better or something
         for i in 0..N {
             let instance = &mut self.instances[i];
