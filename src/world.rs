@@ -42,9 +42,9 @@ impl World {
 
         let mut floor = Cuboid {
             scale: Vec3 {
-                x: 200.0,
+                x: 1000.0,
                 y: 1.0,
-                z: 200.0,
+                z: 1000.0,
             },
             position: Vec3 {
                 x: 0.0,

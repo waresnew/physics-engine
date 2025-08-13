@@ -181,33 +181,33 @@ pub const CUBE_INDICES: &[u16] = &[
 pub const FLOOR_VERTICES: &[Vertex] = &[
     //triangle 1
     Vertex {
-        position: [100.0, 0.0, 100.0],
+        position: [500.0, 0.0, 500.0],
         colour: [0.38, 0.38, 0.38],
         normal: [0.0, 1.0, 0.0],
     },
     Vertex {
-        position: [100.0, 0.0, -100.0],
+        position: [500.0, 0.0, -500.0],
         colour: [0.38, 0.38, 0.38],
         normal: [0.0, 1.0, 0.0],
     },
     Vertex {
-        position: [-100.0, 0.0, -100.0],
+        position: [-500.0, 0.0, -500.0],
         colour: [0.38, 0.38, 0.38],
         normal: [0.0, 1.0, 0.0],
     },
     //triangle 2
     Vertex {
-        position: [-100.0, 0.0, -100.0],
+        position: [-500.0, 0.0, -500.0],
         colour: [0.38, 0.38, 0.38],
         normal: [0.0, 1.0, 0.0],
     },
     Vertex {
-        position: [-100.0, 0.0, 100.0],
+        position: [-500.0, 0.0, 500.0],
         colour: [0.38, 0.38, 0.38],
         normal: [0.0, 1.0, 0.0],
     },
     Vertex {
-        position: [100.0, 0.0, 100.0],
+        position: [500.0, 0.0, 500.0],
         colour: [0.38, 0.38, 0.38],
         normal: [0.0, 1.0, 0.0],
     },
