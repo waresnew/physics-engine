@@ -5,7 +5,7 @@ use crate::{
     world::Cuboid,
 };
 
-pub const N: usize = 8 * 8 * 8; //number of cuboids minus floor
+pub const N: usize = 40 * 40 * 40; //number of cuboids minus floor
 
 //TODO: take in cmd args from cargo run and use that to set N and Scene, then i can easily
 //reproduce scenes with the same command
@@ -290,7 +290,7 @@ impl Scene {
             }
             Scene::Cube => {
                 let len = (N as f32).cbrt() as usize;
-                const INSTANCE_SPACING: f32 = 2.0;
+                const INSTANCE_SPACING: f32 = 4.0;
                 for i in 0..len {
                     for j in 0..len {
                         for k in 0..len {

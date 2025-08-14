@@ -400,14 +400,12 @@ impl Plane {
         let numerator = self.normal.dot(&(&self.point - point1));
         let denominator = self.normal.dot(&dir);
         if denominator.abs() < EPSILON {
-            eprintln!("line segment parallel to plane");
             None
         } else {
             let t = numerator / denominator;
             if (-EPSILON..=1.0 + EPSILON).contains(&t) {
                 Some(point1 + &(t * dir))
             } else {
-                eprintln!("line segment doesn't intersect with plane");
                 None
             }
         }

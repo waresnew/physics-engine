@@ -275,7 +275,7 @@ pub fn resolve_collisions(collisions: &[CollisionInfo], instances: &mut [Cuboid]
 
             for point in &info.manifold {
                 let Some(ContactPoint { point, depth }) = point else {
-                    break;
+                    continue;
                 };
                 let point = *point;
                 let depth = (*depth - PENETRATION_TOLERANCE).max(0.0);

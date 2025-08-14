@@ -1,4 +1,5 @@
 pub mod camera;
+pub mod hash_grid;
 pub mod math;
 pub mod physics;
 pub mod scenes;

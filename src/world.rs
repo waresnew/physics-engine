@@ -1,4 +1,5 @@
 use crate::{
+    hash_grid::HashGrid,
     math::{EPSILON, Mat3, Quaternion, Vec3},
     physics::{CollisionInfo, detect_collision, resolve_collisions},
     scenes::{N, Scene},
@@ -8,6 +9,7 @@ pub struct World {
     pub instances: Vec<Cuboid>,
     floor: Cuboid,
     collisions: Vec<CollisionInfo>,
+    hash_grid: HashGrid,
 }
 
 // SI units
@@ -58,16 +60,18 @@ impl World {
         floor.update_derived();
         instances.push(floor);
 
+        let hash_grid = HashGrid::new(&instances, N);
         Self {
             instances,
             floor,
             collisions: Vec::with_capacity(N * 8 / 2 + N),
+            hash_grid,
         }
     }
 
     pub fn update(&mut self, dt: f32) {
-        print!("\rTPS: {}", 1.0 / dt);
-        let dt = 1.0 / 180.0; //HACK: less random simulations, adapting to refresh rate prob better or something
+        // print!("\rTPS: {}", 1.0 / dt);
+        // let dt = 1.0 / 180.0; //HACK: less random simulations, adapting to refresh rate prob better or something
         for i in 0..N {
             let instance = &mut self.instances[i];
             if !instance.frozen {
@@ -83,7 +87,12 @@ impl World {
 
                 instance.update_derived();
             }
+        }
+        self.hash_grid.clear();
+        self.hash_grid.init(&self.instances);
 
+        for i in 0..N {
+            let instance = &self.instances[i];
             if instance.aabb.intersects(&self.floor.aabb) {
                 if let Some(collision_info) = detect_collision(instance, &self.floor) {
                     if self.collisions.len() < self.collisions.capacity() {
@@ -93,21 +102,40 @@ impl World {
                     }
                 }
             }
+        }
 
-            //OPTIMIZE:O(n^2)
-            for j in (i + 1)..N {
-                let (a, b) = self.instances.split_at_mut(j);
-                let instance = &mut a[i];
-                let other = &mut b[0];
-                if let Some(collision_info) = detect_collision(instance, other) {
-                    if self.collisions.len() < self.collisions.capacity() {
-                        self.collisions.push(collision_info);
-                    } else {
-                        eprintln!("self.collisions capacity exceeded");
+        let mut count1 = 0.0;
+        let mut count2 = 0.0;
+        let mut count3 = 0.0;
+        for bucket in &self.hash_grid.buckets {
+            for i in 0..bucket.len() {
+                for j in i + 1..bucket.len() {
+                    count1 += 1.0;
+                    let instance = &self.instances[bucket[i]];
+                    let other = &self.instances[bucket[j]];
+                    if instance.index == other.index {
+                        continue;
+                    }
+                    if instance.aabb.intersects(&other.aabb) {
+                        count2 += 1.0;
+                        if let Some(collision_info) = detect_collision(instance, other) {
+                            count3 += 1.0;
+                            if self.collisions.len() < self.collisions.capacity() {
+                                self.collisions.push(collision_info);
+                            } else {
+                                eprintln!("self.collisions capacity exceeded");
+                            }
+                        }
                     }
                 }
             }
         }
+        println!(
+            "funnel: {}%, {}%,{}%",
+            100.0 * (count1 / count1),
+            100.0 * (count2 / count1),
+            100.0 * (count3 / count2)
+        );
         resolve_collisions(&self.collisions, &mut self.instances, dt);
         self.collisions.clear();
     }
@@ -316,8 +344,8 @@ impl Default for Cuboid {
 }
 #[derive(Debug, Default, Copy, Clone)]
 pub struct AABB {
-    min: Vec3,
-    max: Vec3,
+    pub min: Vec3,
+    pub max: Vec3,
 }
 
 impl AABB {

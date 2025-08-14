@@ -98,7 +98,7 @@ impl State {
 
         let camera = Camera {
             position: Vec3 {
-                x: 0.0,
+                x: 0.0, //TODO:adjust initial camera pos based on scene
                 y: 1.0,
                 z: 2.0,
             },
