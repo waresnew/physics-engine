@@ -5,7 +5,7 @@ use crate::{
     world::Cuboid,
 };
 
-pub const N: usize = 22 * 22 * 22; //number of cuboids minus floor
+pub const N: usize = 8; //number of cuboids minus floor
 
 //TODO: take in cmd args from cargo run and use that to set N and Scene, then i can easily
 //reproduce scenes with the same command

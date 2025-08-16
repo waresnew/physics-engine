@@ -1,9 +1,3 @@
-struct InstanceInput {
-    @location(3) model_matrix_0: vec4<f32>,
-    @location(4)model_matrix_1: vec4<f32>,
-    @location(5)model_matrix_2: vec4<f32>,
-    @location(6)model_matrix_3: vec4<f32>
-}
 struct CameraUniform {
     matrix: mat4x4<f32>,
     view_pos: vec3<f32>,
@@ -11,6 +5,8 @@ struct CameraUniform {
 };
 @group(0) @binding(0)
 var<uniform> camera: CameraUniform;
+@group(0) @binding(1)
+var<storage,read>cuboids:array<Cuboid>;
 struct VertexInput {
     @location(0) position: vec3<f32>,
     @location(1) color: vec3<f32>,
@@ -23,17 +19,36 @@ struct VertexOutput {
     @location(1) normal: vec3<f32>,
     @location(2) world_position: vec3<f32>
 };
+struct Cuboid {
+    index: u32,
+    position: vec4<f32>,
+    rotation: vec4<f32>,
+    velocity: vec4<f32>,
+    angular_velocity: vec4<f32>,
+    scale: vec4<f32>,
+    corners: array<vec4<f32>, 8>,
+    aabb_min: vec4<f32>,
+    aabb_max: vec4<f32>,
+    frozen: u32,
+    face_axes: array<vec4<f32>, 3>,
+    density: f32,
+};
 
-@vertex
-fn vs_main(
-    model: VertexInput,
-    instance: InstanceInput
+@vertex fn vs_main( model: VertexInput,@builtin(instance_index) index:u32
 ) -> VertexOutput {
-    let model_matrix = mat4x4<f32>(
-        instance.model_matrix_0,
-        instance.model_matrix_1,
-        instance.model_matrix_2,
-        instance.model_matrix_3
+    let cuboid=cuboids[index];
+    let scale=cuboid.scale;
+    let rotation=cuboid.rotation;
+    let position=cuboid.position;
+    let r=rotation[0];
+    let x=rotation[1];
+    let y=rotation[2];
+    let z=rotation[3];
+    let model_matrix=mat4x4<f32>(
+        vec4<f32>( (r*r + x*x - y*y - z*z) * scale.x, (-2.0*r*z + 2.0*x*y) * scale.x, (2.0*r*y + 2.0*x*z) * scale.x, 0.0 ),
+        vec4<f32>( (2.0*r*z + 2.0*x*y) * scale.y, (r*r + y*y - x*x - z*z) * scale.y, (-2.0*r*x + 2.0*y*z) * scale.y, 0.0 ),
+        vec4<f32>( (-2.0*r*y + 2.0*x*z) * scale.z, (2.0*r*x + 2.0*y*z) * scale.z, (r*r + z*z - x*x - y*y) * scale.z, 0.0 ),
+        vec4<f32>( position.x, position.y, position.z, 1.0 )
     );
     return calculate_vertex_output(model, model_matrix);
 }

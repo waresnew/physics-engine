@@ -336,16 +336,22 @@ impl Cuboid {
             },
         }
     }
-    #[rustfmt::skip]
-    pub fn to_raw(&self)->CuboidRaw {
-        let rotation_matrix=self.rotation.to_mat3();
+
+    pub fn to_raw(&self) -> CuboidRaw {
         CuboidRaw {
-            model:[
-                    rotation_matrix.array[0]*self.scale.x, rotation_matrix.array[1]*self.scale.x, rotation_matrix.array[2]*self.scale.x, 0.0,
-                    rotation_matrix.array[3]*self.scale.y, rotation_matrix.array[4]*self.scale.y, rotation_matrix.array[5]*self.scale.y, 0.0,
-                    rotation_matrix.array[6]*self.scale.z, rotation_matrix.array[7]*self.scale.z, rotation_matrix.array[8]*self.scale.z, 0.0,
-                    self.position.x,        self.position.y,        self.position.z,                               1.0,
-            ]
+            index: self.index as u32,
+            position: self.position.to_raw(),
+            rotation: self.rotation.to_raw(),
+            velocity: self.velocity.to_raw(),
+            angular_velocity: self.angular_velocity.to_raw(),
+            scale: self.scale.to_raw(),
+            corners: self.corners.map(|x| x.to_raw()),
+            aabb_min: self.aabb.min.to_raw(),
+            aabb_max: self.aabb.max.to_raw(),
+            frozen: self.frozen as u32,
+            face_axes: self.face_axes.map(|x| x.to_raw()),
+            density: self.density,
+            ..Default::default()
         }
     }
 }
@@ -399,21 +405,21 @@ impl AABB {
 }
 
 #[repr(C)]
-#[derive(Default, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+#[derive(Debug, Default, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct CuboidRaw {
-    model: [f32; 16],
-}
-
-impl CuboidRaw {
-    //4 vec4s = 1 mat4
-    const ATTRIBUTES: [wgpu::VertexAttribute; 4] =
-        wgpu::vertex_attr_array![3=>Float32x4,4=>Float32x4,5=>Float32x4,6=>Float32x4];
-    pub fn desc() -> wgpu::VertexBufferLayout<'static> {
-        use std::mem;
-        wgpu::VertexBufferLayout {
-            array_stride: mem::size_of::<Self>() as wgpu::BufferAddress,
-            step_mode: wgpu::VertexStepMode::Instance,
-            attributes: &Self::ATTRIBUTES,
-        }
-    }
+    index: u32,
+    _padding1: [u32; 3],
+    position: [f32; 4],
+    rotation: [f32; 4],
+    velocity: [f32; 4],
+    angular_velocity: [f32; 4],
+    scale: [f32; 4],
+    corners: [[f32; 4]; 8],
+    aabb_min: [f32; 4],
+    aabb_max: [f32; 4],
+    frozen: u32, // 0/1
+    _padding2: [u32; 3],
+    face_axes: [[f32; 4]; 3],
+    density: f32,
+    _padding3: [f32; 3],
 }

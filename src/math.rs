@@ -157,6 +157,9 @@ impl Vec3 {
     pub fn distance(&self, other: &Vec3) -> f32 {
         self.distance_squared(other).sqrt()
     }
+    pub fn to_raw(&self) -> [f32; 4] {
+        [self.x, self.y, self.z, 0.0]
+    }
 }
 //1d array so i can enforce column major when sending to shader
 // note that wgpu expects contiguous cells to represent a column, so each "row" i specify is actually a column from top-bottom
@@ -342,6 +345,9 @@ impl Quaternion {
             y: self.y / mag,
             z: self.z / mag,
         }
+    }
+    pub fn to_raw(&self) -> [f32; 4] {
+        [self.real, self.x, self.y, self.z]
     }
     #[rustfmt::skip]
     pub fn to_mat3(&self) -> Mat3 {

@@ -1,6 +1,6 @@
 use crate::camera::{Camera, CameraController};
 use crate::math::{Mat4, Vec3};
-use crate::scenes::N;
+use crate::scenes::{N, Scene};
 use crate::world::{Cuboid, CuboidRaw, PHYSICS_DT, World};
 use crate::{CUBE_INDICES, CUBE_VERTICES, FLOOR_VERTICES, Vertex};
 use std::sync::Arc;
@@ -50,16 +50,17 @@ struct State {
     num_indices: u32,
     camera: Camera,
     camera_buffer: wgpu::Buffer,
-    camera_bind_group: wgpu::BindGroup,
+    render_bind_group: wgpu::BindGroup,
     camera_uniform: CameraUniform,
     camera_controller: CameraController,
     depth_texture: wgpu::Texture,
-    world: World,
-    instance_buffer: wgpu::Buffer,
     floor_vertex_buffer: wgpu::Buffer,
     floor_pipeline: wgpu::RenderPipeline,
     tick_accumulator: f32,
     paused: bool,
+    cuboid_buffer: wgpu::Buffer,
+    physics_compute_pipeline: wgpu::ComputePipeline,
+    physics_bind_group: wgpu::BindGroup,
 }
 
 impl State {
@@ -119,60 +120,117 @@ impl State {
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         });
 
-        let camera_bind_group_layout =
+        let render_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                entries: &[
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: true },
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                ],
+                label: Some("Render Bind Group Layout"),
+            });
+
+        let mut instances = Vec::with_capacity(N + 1);
+        Scene::Cube.populate_scene(&mut instances);
+        let mut raw_instances = [CuboidRaw::default(); N];
+        for (i, instance) in instances[..N].iter().enumerate() {
+            raw_instances[i] = instance.to_raw();
+        }
+        let cuboid_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Cuboid Buffer"),
+            contents: bytemuck::cast_slice(&raw_instances),
+            usage: wgpu::BufferUsages::STORAGE,
+        });
+        let render_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            layout: &render_bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: camera_buffer.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: cuboid_buffer.as_entire_binding(),
+                },
+            ],
+            label: Some("Render Bind Group"),
+        });
+        let render_pipeline_layout =
+            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some("Render Pipeline Layout"),
+                bind_group_layouts: &[&render_bind_group_layout],
+                push_constant_ranges: &[],
+            });
+
+        let physics_bind_group_layout =
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                 entries: &[wgpu::BindGroupLayoutEntry {
                     binding: 0,
-                    visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
+                    visibility: wgpu::ShaderStages::COMPUTE,
                     ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Uniform,
+                        ty: wgpu::BufferBindingType::Storage { read_only: false },
                         has_dynamic_offset: false,
                         min_binding_size: None,
                     },
                     count: None,
                 }],
-                label: Some("Camera Bind Group Layout"),
+                label: Some("Physics Bind Group Layout"),
             });
-
-        let camera_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            layout: &camera_bind_group_layout,
+        let physics_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            layout: &physics_bind_group_layout,
             entries: &[wgpu::BindGroupEntry {
                 binding: 0,
-                resource: camera_buffer.as_entire_binding(),
+                resource: cuboid_buffer.as_entire_binding(),
             }],
-            label: Some("Camera Bind Group"),
+            label: Some("Physics bind group"),
         });
-        let render_pipeline_layout =
+        let physics_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("Render Pipeline Layout"),
-                bind_group_layouts: &[&camera_bind_group_layout],
+                label: Some("Physics pipeline layout"),
+                bind_group_layouts: &[&physics_bind_group_layout],
                 push_constant_ranges: &[],
             });
-
-        let world = World::new();
-        let mut raw_instances = [CuboidRaw::default(); N];
-        for (i, instance) in world.instances[..N].iter().enumerate() {
-            raw_instances[i] = Cuboid::to_raw(instance);
-        }
-        let instance_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Instance Buffer"),
-            contents: bytemuck::cast_slice(&raw_instances),
-            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
-        });
+        let physics_shader = device.create_shader_module(wgpu::include_wgsl!("physics.wgsl"));
+        let physics_compute_pipeline =
+            device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                label: None,
+                layout: Some(&physics_pipeline_layout),
+                module: &physics_shader,
+                entry_point: Some("update"),
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+                cache: None,
+            });
 
         let depth_texture = Self::create_depth_texture(&device, size);
 
-        let render_pipeline = Self::make_pipeline(
+        let render_pipeline = Self::make_render_pipeline(
             &device,
             &shader,
             &render_pipeline_layout,
             surface_format,
             "vs_main",
-            &[Vertex::desc(), CuboidRaw::desc()],
+            &[Vertex::desc()],
             true,
         );
 
-        let floor_pipeline = Self::make_pipeline(
+        let floor_pipeline = Self::make_render_pipeline(
             &device,
             &shader,
             &render_pipeline_layout,
@@ -194,16 +252,17 @@ impl State {
             num_indices,
             camera,
             camera_buffer,
-            camera_bind_group,
+            render_bind_group,
             camera_uniform,
             camera_controller,
             depth_texture,
-            world,
-            instance_buffer,
             floor_vertex_buffer,
             floor_pipeline,
             tick_accumulator: 0.0,
             paused: true,
+            cuboid_buffer,
+            physics_compute_pipeline,
+            physics_bind_group,
         };
         state.configure_surface();
         state
@@ -227,7 +286,7 @@ impl State {
             view_formats: &[],
         })
     }
-    fn make_pipeline(
+    fn make_render_pipeline(
         device: &wgpu::Device,
         shader: &wgpu::ShaderModule,
         render_pipeline_layout: &wgpu::PipelineLayout,
@@ -317,24 +376,27 @@ impl State {
             bytemuck::cast_slice(&[self.camera_uniform]),
         );
         if !self.paused {
-            self.tick_accumulator += dt.as_secs_f32();
-            let mut tick_count = 0;
-            while self.tick_accumulator >= PHYSICS_DT && tick_count < 3 {
-                self.world.update();
-                self.tick_accumulator -= PHYSICS_DT;
-                tick_count += 1;
-            }
-        }
-        let mut raw_instances = [CuboidRaw::default(); N];
-        for (i, instance) in self.world.instances[..N].iter().enumerate() {
-            raw_instances[i] = Cuboid::to_raw(instance);
-        }
+		self.tick_accumulator += dt.as_secs_f32();
+		let mut tick_count = 0;
+		while self.tick_accumulator >= PHYSICS_DT && tick_count < 3 {
+		    let mut encoder = self
+			.device
+			.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
 
-        self.queue.write_buffer(
-            &self.instance_buffer,
-            0,
-            bytemuck::cast_slice(&raw_instances),
-        );
+		    let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+			label: None,
+			timestamp_writes: None,
+		    });
+		    compute_pass.set_pipeline(&self.physics_compute_pipeline);
+		    compute_pass.set_bind_group(0, &self.physics_bind_group, &[]);
+		    compute_pass.dispatch_workgroups(N.div_ceil(64) as u32, 1, 1); //64 workgroup size, 1d array of cuboids
+		    drop(compute_pass);
+		    let command_buffer = encoder.finish();
+		    self.queue.submit([command_buffer]);
+		    self.tick_accumulator -= PHYSICS_DT;
+		    tick_count += 1;
+		}
+}
     }
 
     fn render(&mut self) {
@@ -377,9 +439,8 @@ impl State {
         });
 
         renderpass.set_pipeline(&self.render_pipeline);
-        renderpass.set_bind_group(0, &self.camera_bind_group, &[]);
+        renderpass.set_bind_group(0, &self.render_bind_group, &[]);
         renderpass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
-        renderpass.set_vertex_buffer(1, self.instance_buffer.slice(..));
         renderpass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
         renderpass.draw_indexed(0..self.num_indices, 0, 0..N as u32);
 
