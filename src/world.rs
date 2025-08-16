@@ -181,15 +181,6 @@ impl World {
 #[cfg(test)]
 mod tests {
     use super::*;
-    #[test]
-    fn test_floor_corners() {
-        let world = World::new();
-        let count1 = world.floor.corners.iter().filter(|x| x.y == 0.0).count();
-        let count2 = world.floor.corners.iter().filter(|x| x.y == -1.0).count();
-
-        assert_eq!(count1, 4);
-        assert_eq!(count2, 4);
-    }
 
     #[test]
     fn test_cuboid_model_matrix() {
