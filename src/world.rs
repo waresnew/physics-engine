@@ -1,3 +1,8 @@
+use std::{
+    io::{self, Write},
+    time::{Duration, Instant},
+};
+
 use crate::{
     hash_grid::HashGrid,
     math::{EPSILON, Mat3, Quaternion, Vec3},
@@ -10,8 +15,11 @@ pub struct World {
     floor: Cuboid,
     collisions: Vec<CollisionInfo>,
     hash_grid: HashGrid,
+    last_log: Instant,
+    last_tick: Instant,
 }
 
+pub const PHYSICS_DT: f32 = 1.0 / 60.0;
 // SI units
 const GRAV_ACCEL: Vec3 = Vec3 {
     x: 0.0,
@@ -66,12 +74,13 @@ impl World {
             floor,
             collisions: Vec::with_capacity(N * 8 / 2 + N),
             hash_grid,
+            last_log: Instant::now(),
+            last_tick: Instant::now(),
         }
     }
 
-    pub fn update(&mut self, dt: f32) {
-        // print!("\rTPS: {}", 1.0 / dt);
-        // let dt = 1.0 / 180.0; //HACK: less random simulations, adapting to refresh rate prob better or something
+    pub fn update(&mut self) {
+        let dt = PHYSICS_DT;
         for i in 0..N {
             let instance = &mut self.instances[i];
             if !instance.frozen {
@@ -88,8 +97,10 @@ impl World {
                 instance.update_derived();
             }
         }
+        let grid_init_time = Instant::now();
         self.hash_grid.clear();
         self.hash_grid.init(&self.instances);
+        let floor_time = Instant::now();
 
         for i in 0..N {
             let instance = &self.instances[i];
@@ -104,22 +115,24 @@ impl World {
             }
         }
 
-        let mut count1 = 0.0;
-        let mut count2 = 0.0;
-        let mut count3 = 0.0;
+        let broad_time = Instant::now();
+        let mut narrow_time = 0;
+        let mut check_count = 0;
         for bucket in &self.hash_grid.buckets {
+            if bucket.len() <= 1 {
+                continue;
+            }
             for i in 0..bucket.len() {
+                let instance = &self.instances[bucket[i]];
                 for j in i + 1..bucket.len() {
-                    count1 += 1.0;
-                    let instance = &self.instances[bucket[i]];
                     let other = &self.instances[bucket[j]];
+                    check_count += 1;
                     if instance.index == other.index {
                         continue;
                     }
+                    let pre = Instant::now();
                     if instance.aabb.intersects(&other.aabb) {
-                        count2 += 1.0;
                         if let Some(collision_info) = detect_collision(instance, other) {
-                            count3 += 1.0;
                             if self.collisions.len() < self.collisions.capacity() {
                                 self.collisions.push(collision_info);
                             } else {
@@ -127,17 +140,29 @@ impl World {
                             }
                         }
                     }
+                    narrow_time += pre.elapsed().as_nanos();
                 }
             }
         }
-        println!(
-            "funnel: {}%, {}%,{}%",
-            100.0 * (count1 / count1),
-            100.0 * (count2 / count1),
-            100.0 * (count3 / count2)
-        );
+        let broad_phase_time = (Instant::now() - broad_time).as_nanos() - narrow_time;
+        let impulse_time = Instant::now();
         resolve_collisions(&self.collisions, &mut self.instances, dt);
+        if self.last_log.elapsed() > Duration::from_secs(1) {
+            print!(
+                "\rTPS: {}, grid init: {} ms, floor: {} ms, check count: {}, broad: {} ms, narrow {} ms, impulse: {} ms",
+                self.last_tick.elapsed().as_millis(),
+                (floor_time - grid_init_time).as_millis(),
+                (broad_time - floor_time).as_millis(),
+                check_count,
+                broad_phase_time / 1000000,
+                narrow_time / 1000000,
+                impulse_time.elapsed().as_millis()
+            );
+            io::stdout().flush().unwrap();
+            self.last_log = Instant::now();
+        }
         self.collisions.clear();
+        self.last_tick = Instant::now();
     }
 }
 

@@ -1,7 +1,7 @@
 use crate::camera::{Camera, CameraController};
 use crate::math::{Mat4, Vec3};
 use crate::scenes::N;
-use crate::world::{Cuboid, CuboidRaw, World};
+use crate::world::{Cuboid, CuboidRaw, PHYSICS_DT, World};
 use crate::{CUBE_INDICES, CUBE_VERTICES, FLOOR_VERTICES, Vertex};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -58,6 +58,7 @@ struct State {
     instance_buffer: wgpu::Buffer,
     floor_vertex_buffer: wgpu::Buffer,
     floor_pipeline: wgpu::RenderPipeline,
+    tick_accumulator: f32,
 }
 
 impl State {
@@ -200,6 +201,7 @@ impl State {
             instance_buffer,
             floor_vertex_buffer,
             floor_pipeline,
+            tick_accumulator: 0.0,
         };
         state.configure_surface();
         state
@@ -312,7 +314,13 @@ impl State {
             0,
             bytemuck::cast_slice(&[self.camera_uniform]),
         );
-        self.world.update(dt.as_secs_f32());
+        self.tick_accumulator += dt.as_secs_f32();
+        let mut tick_count = 0;
+        while self.tick_accumulator >= PHYSICS_DT && tick_count < 3 {
+            self.world.update();
+            self.tick_accumulator -= PHYSICS_DT;
+            tick_count += 1;
+        }
         let mut raw_instances = [CuboidRaw::default(); N];
         for (i, instance) in self.world.instances[..N].iter().enumerate() {
             raw_instances[i] = Cuboid::to_raw(instance);

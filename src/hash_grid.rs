@@ -17,10 +17,13 @@ impl HashGrid {
         }
         let mut spacing = Vec3::default();
         for i in 0..n {
-            spacing += instances[i].scale;
+            spacing = Vec3 {
+                x: spacing.x.max(instances[i].scale.x),
+                y: spacing.y.max(instances[i].scale.y),
+                z: spacing.z.max(instances[i].scale.z),
+            }
         }
-        spacing /= n as f32;
-        spacing *= 4.0;
+        spacing *= 1.5;
         Self {
             spacing,
             buckets,
@@ -35,9 +38,6 @@ impl HashGrid {
                 self.buckets[index].push(instance.index);
             });
             largest = largest.max(self.buckets[i].len());
-        }
-        if largest > self.n / 10 {
-            eprintln!("buckets are getting big, too many hash collisions?");
         }
     }
     pub fn for_each_cell<F>(instance: &Cuboid, spacing: Vec3, n: usize, mut f: F)
@@ -117,7 +117,7 @@ mod tests {
         let mut len = 0;
         HashGrid::for_each_cell(&instances[0], grid.spacing, grid.n, |cell_index| {
             let bucket = &grid.buckets[cell_index];
-            dbg!(bucket);
+            dbg!(&bucket);
             assert_eq!(bucket.len(), 2);
             len += 1;
         });

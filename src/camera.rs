@@ -41,7 +41,7 @@ impl Camera {
     #[rustfmt::skip]
     pub fn calc_projection_matrix(&self) -> Mat4 {
         const Z_NEAR: f32 = 0.1;
-        const Z_FAR: f32 = 100.0;
+        const Z_FAR: f32 = 1000.0;
         const FOV_Y: f32 = std::f32::consts::PI / 2.0;
         let f = 1.0 / ((FOV_Y / 2.0).tan());
         Mat4 {
