@@ -5,7 +5,7 @@ use crate::{
     world::Cuboid,
 };
 
-pub const N: usize = 20 * 20 * 20; //number of cuboids minus floor
+pub const N: usize = 100; //number of cuboids minus floor
 
 //TODO: take in cmd args from cargo run and use that to set N and Scene, then i can easily
 //reproduce scenes with the same command
@@ -95,6 +95,7 @@ impl Scene {
                 y: if !inverted { 60.0 } else { big_scale.y / 2.0 },
                 z: little_scale.z * INSTANCE_SPACING * num_cols as f32 / 2.0,
             },
+            density: 5.0,
             scale: big_scale,
             index: N - 1,
             ..Default::default()

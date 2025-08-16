@@ -59,6 +59,7 @@ struct State {
     floor_vertex_buffer: wgpu::Buffer,
     floor_pipeline: wgpu::RenderPipeline,
     tick_accumulator: f32,
+    paused: bool,
 }
 
 impl State {
@@ -99,7 +100,7 @@ impl State {
 
         let camera = Camera {
             position: Vec3 {
-                x: 0.0, //TODO:adjust initial camera pos based on scene
+                x: 0.0,
                 y: 1.0,
                 z: 2.0,
             },
@@ -202,6 +203,7 @@ impl State {
             floor_vertex_buffer,
             floor_pipeline,
             tick_accumulator: 0.0,
+            paused: true,
         };
         state.configure_surface();
         state
@@ -314,12 +316,14 @@ impl State {
             0,
             bytemuck::cast_slice(&[self.camera_uniform]),
         );
-        self.tick_accumulator += dt.as_secs_f32();
-        let mut tick_count = 0;
-        while self.tick_accumulator >= PHYSICS_DT && tick_count < 3 {
-            self.world.update();
-            self.tick_accumulator -= PHYSICS_DT;
-            tick_count += 1;
+        if !self.paused {
+            self.tick_accumulator += dt.as_secs_f32();
+            let mut tick_count = 0;
+            while self.tick_accumulator >= PHYSICS_DT && tick_count < 3 {
+                self.world.update();
+                self.tick_accumulator -= PHYSICS_DT;
+                tick_count += 1;
+            }
         }
         let mut raw_instances = [CuboidRaw::default(); N];
         for (i, instance) in self.world.instances[..N].iter().enumerate() {
@@ -439,7 +443,12 @@ impl ApplicationHandler for App {
                         ..
                     },
                 ..
-            } => state.camera_controller.on_key(code, key_state.is_pressed()),
+            } => {
+                if code == winit::keyboard::KeyCode::Enter && key_state.is_pressed() {
+                    state.paused = !state.paused;
+                }
+                state.camera_controller.on_key(code, key_state.is_pressed());
+            }
             _ => (),
         }
     }

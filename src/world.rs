@@ -1,4 +1,5 @@
 use std::{
+    collections::HashSet,
     io::{self, Write},
     time::{Duration, Instant},
 };
@@ -17,9 +18,10 @@ pub struct World {
     hash_grid: HashGrid,
     last_log: Instant,
     last_tick: Instant,
+    vis_collisions: HashSet<(usize, usize)>,
 }
 
-pub const PHYSICS_DT: f32 = 1.0 / 60.0;
+pub const PHYSICS_DT: f32 = 1.0 / 180.0; //180 for accuracy, 60 for speed
 // SI units
 const GRAV_ACCEL: Vec3 = Vec3 {
     x: 0.0,
@@ -76,6 +78,7 @@ impl World {
             hash_grid,
             last_log: Instant::now(),
             last_tick: Instant::now(),
+            vis_collisions: HashSet::with_capacity(N * 8 / 2 + N),
         }
     }
 
@@ -130,11 +133,19 @@ impl World {
                     if instance.index == other.index {
                         continue;
                     }
+                    let pair = (
+                        instance.index.min(other.index),
+                        instance.index.max(other.index),
+                    );
+                    if self.vis_collisions.contains(&pair) {
+                        continue;
+                    }
                     let pre = Instant::now();
                     if instance.aabb.intersects(&other.aabb) {
                         if let Some(collision_info) = detect_collision(instance, other) {
                             if self.collisions.len() < self.collisions.capacity() {
                                 self.collisions.push(collision_info);
+                                self.vis_collisions.insert(pair);
                             } else {
                                 eprintln!("self.collisions capacity exceeded");
                             }
@@ -162,6 +173,7 @@ impl World {
             self.last_log = Instant::now();
         }
         self.collisions.clear();
+        self.vis_collisions.clear();
         self.last_tick = Instant::now();
     }
 }
