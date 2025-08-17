@@ -105,6 +105,7 @@ impl World {
         self.hash_grid.init(&self.instances);
         let floor_time = Instant::now();
 
+        let mut check_count = 0;
         for i in 0..N {
             let instance = &self.instances[i];
             if instance.aabb.intersects(&self.floor.aabb) {
@@ -120,7 +121,6 @@ impl World {
 
         let broad_time = Instant::now();
         let mut narrow_time = 0;
-        let mut check_count = 0;
         for bucket in &self.hash_grid.buckets {
             if bucket.len() <= 1 {
                 continue;

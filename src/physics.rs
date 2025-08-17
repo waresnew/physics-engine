@@ -122,7 +122,6 @@ fn calc_contact_manifold(
         None,
     ];
     let mut cur_clipped_len = 4;
-    //clip with side planes
     for (ref_p1, ref_p2) in reference_face_sides {
         let reference_plane = Plane {
             point: ref_p1,
@@ -175,7 +174,7 @@ fn calc_contact_manifold(
         cur_clipped = next_clipped;
         cur_clipped_len = next_clipped_len;
     }
-    //final depth check with reference_face
+
     let reference_plane = Plane {
         normal: reference_face,
         //OPTIMIZE: could reuse get_face_vertices() call from before (not sure if worth it)
@@ -309,16 +308,16 @@ pub fn resolve_collisions(collisions: &[CollisionInfo], instances: &mut [Cuboid]
                     if matches!(impulse_type, ImpulseType::Normal) && v_error > 0.0 {
                         return None;
                     }
-                    //delta v or w assuming impulse=1kgms^-1 (aka use impulse_dir)
+
                     let unit_delta_w1 = &inv_moi1 * &(r1.cross(&impulse_dir));
                     let unit_delta_v1 = unit_delta_w1.cross(&r1);
                     let unit_delta_w2 = &inv_moi2 * &(r2.cross(&impulse_dir));
                     let unit_delta_v2 = unit_delta_w2.cross(&r2);
 
-                    let effective_inv_mass = inv_m1 //from COM
-                        + inv_m2 //from COM
-                        + unit_delta_v1.dot(&impulse_dir) //from point
-                        + unit_delta_v2.dot(&impulse_dir); //from point
+                    let effective_inv_mass = inv_m1
+                        + inv_m2
+                        + unit_delta_v1.dot(&impulse_dir)
+                        + unit_delta_v2.dot(&impulse_dir);
                     if effective_inv_mass.epsilon_equals(0.0) {
                         return None;
                     }
@@ -342,7 +341,7 @@ pub fn resolve_collisions(collisions: &[CollisionInfo], instances: &mut [Cuboid]
                     };
                     let impulse = impulse_mag * impulse_dir;
                     instance.velocity += impulse * inv_m1;
-                    instance.angular_velocity += &inv_moi1 * &(r1.cross(&impulse)); //same calc as for unit_delta_w1 except now i use impulse with correct mag
+                    instance.angular_velocity += &inv_moi1 * &(r1.cross(&impulse));
                     other.velocity -= impulse * inv_m2;
                     other.angular_velocity -= &inv_moi2 * &(r2.cross(&impulse));
                     match impulse_type {

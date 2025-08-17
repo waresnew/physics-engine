@@ -52,7 +52,6 @@ impl Camera {
                 0.0,                   0.0,            Z_FAR / (Z_NEAR - Z_FAR),            -1.0,
                 0.0,                   0.0,         (Z_NEAR * Z_FAR) / (Z_NEAR - Z_FAR),     0.0,
             ],
-            //seems like the gpu automatically divides by -z to normalize z-coords -> creates nonlinear depth
         }
     }
 }
