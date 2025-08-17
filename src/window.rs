@@ -376,27 +376,27 @@ impl State {
             bytemuck::cast_slice(&[self.camera_uniform]),
         );
         if !self.paused {
-		self.tick_accumulator += dt.as_secs_f32();
-		let mut tick_count = 0;
-		while self.tick_accumulator >= PHYSICS_DT && tick_count < 3 {
-		    let mut encoder = self
-			.device
-			.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
+            self.tick_accumulator += dt.as_secs_f32();
+            let mut tick_count = 0;
+            while self.tick_accumulator >= PHYSICS_DT && tick_count < 3 {
+                let mut encoder = self
+                    .device
+                    .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
 
-		    let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-			label: None,
-			timestamp_writes: None,
-		    });
-		    compute_pass.set_pipeline(&self.physics_compute_pipeline);
-		    compute_pass.set_bind_group(0, &self.physics_bind_group, &[]);
-		    compute_pass.dispatch_workgroups(N.div_ceil(64) as u32, 1, 1); //64 workgroup size, 1d array of cuboids
-		    drop(compute_pass);
-		    let command_buffer = encoder.finish();
-		    self.queue.submit([command_buffer]);
-		    self.tick_accumulator -= PHYSICS_DT;
-		    tick_count += 1;
-		}
-}
+                let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                    label: None,
+                    timestamp_writes: None,
+                });
+                compute_pass.set_pipeline(&self.physics_compute_pipeline);
+                compute_pass.set_bind_group(0, &self.physics_bind_group, &[]);
+                compute_pass.dispatch_workgroups(N.div_ceil(64) as u32, 1, 1); //64 workgroup size, 1d array of cuboids
+                drop(compute_pass);
+                let command_buffer = encoder.finish();
+                self.queue.submit([command_buffer]);
+                self.tick_accumulator -= PHYSICS_DT;
+                tick_count += 1;
+            }
+        }
     }
 
     fn render(&mut self) {
