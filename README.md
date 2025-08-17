@@ -1,6 +1,6 @@
 <h1 align="center">Physics Engine</h1>
 <p align="center">
-<img width="698" height="385" alt="Preview" src="https://github.com/user-attachments/assets/b92681f2-5cef-4f00-a774-0fc8ec316819" />
+<img width="698" height="385" alt="Preview" src="https://github.com/user-attachments/assets/b0345123-b6c2-4834-918c-2729e3d556b4" />
 </p>
 
 Rigid cuboid simulation and rendering using Rust and WGSL.
@@ -11,38 +11,38 @@ The videos will look a bit blurry due to compression, but they are not sped up/p
 
 ### Grid
 
-https://github.com/user-attachments/assets/ad2bdbaa-3b72-4cf5-b670-0653c5f11af8
+https://github.com/user-attachments/assets/0cbe4fd5-bf34-4bdb-bbd4-518eced42c97
 
 ### Slanted Tower
 
-https://github.com/user-attachments/assets/905030e5-2eee-452a-a939-25a196c4fcc6
+https://github.com/user-attachments/assets/60ed943e-8d11-4b46-bd77-09cd69741ca5
 
 ### Meteor
 
-https://github.com/user-attachments/assets/8e96fc6b-385d-4d2c-bcfa-689f0d702d2a
+https://github.com/user-attachments/assets/d53d8df0-4268-4503-99f2-1aca7bc87928
 
 ### Inverted Meteor
 
-https://github.com/user-attachments/assets/0e0559ef-3795-4d5f-9c1f-fbaa10090160
+https://github.com/user-attachments/assets/b6032e24-7e71-4df5-8499-ceb03fce62da
 
 ### Catapult
 
-https://github.com/user-attachments/assets/0ea570bf-697b-419b-9a21-e6e59fd2f4cd
+https://github.com/user-attachments/assets/a00c5818-6d74-4096-887f-99068eaa2f3b
 
 ### Sticks
 
-https://github.com/user-attachments/assets/2925ec83-bb8c-4397-ab37-9204fb84c18c
+https://github.com/user-attachments/assets/369bfd75-dd5e-440a-a010-4459bf5e5ae8
 
 ### Platforms
 
-https://github.com/user-attachments/assets/ca8a8e30-2469-4e8d-8c86-080342e28887
+https://github.com/user-attachments/assets/4889f2f7-7deb-4aa4-b1a0-2b58b8d00c99
 
 ### Cube
 
-https://github.com/user-attachments/assets/f7e75199-dcf5-48db-9be4-ad7a730fe260
+https://github.com/user-attachments/assets/43f1adee-5541-452f-b4be-da344ed8276e
 
 ### Cube with 10k mini cubes
 
-https://github.com/user-attachments/assets/c0249475-d192-47e0-973d-aa5db70dab9d
+https://github.com/user-attachments/assets/f9158ed4-f89e-4c62-86cb-ef26e58ba314
 
 
