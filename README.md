@@ -5,6 +5,8 @@
 
 Rigid cuboid simulation and rendering using Rust and WGSL.
 
+## Features
+
 - Freely adjustable first-person camera.
 - Efficient broad-phase collision detection using spatial hashing.
 - Collision manifold calculation using Sutherland-Hodgman face clipping.
