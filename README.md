@@ -5,6 +5,13 @@
 
 Rigid cuboid simulation and rendering using Rust and WGSL.
 
+- Freely adjustable first-person camera.
+- Efficient broad-phase collision detection using spatial hashing.
+- Collision manifold calculation using Sutherland-Hodgman face clipping.
+- Simple per-face directional lighting with Lambertian diffuse and Blinn-Phong specular highlights.
+- Iterative impulse solver that respects conservation of momentum.
+- Rotation changes calculated using quaternions to avoid gimbal lock.
+
 ## Showcase
 
 The videos will look a bit blurry due to compression, but they are not sped up/processed.
